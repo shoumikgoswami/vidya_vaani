@@ -11,7 +11,7 @@ let ids;
 
 before(async () => {
   app = await startApp();
-  admin = await app.client().login(DEMO.admin);
+  admin = await app.client().login(DEMO.admin, 'school');
   meena = await app.client().login(DEMO.meena);
   sunita = await app.client().login(DEMO.sunita);
   const { get } = app.db;
@@ -278,6 +278,12 @@ test('demo sign-in code: wrong codes fail and sends are limited', async () => {
 
 test('the setup wizard runs once, and demo switching never reaches a real account', async () => {
   const guest = app.client();
+  // Before any school exists the office sign-in still turns teachers away, but admits a newcomer.
+  const sent = await guest.post('/api/auth/otp/send', { phone: DEMO.arjun });
+  const teacher = await guest.post('/api/auth/otp/verify', { phone: DEMO.arjun, code: sent.data.demoCode, portal: 'school' });
+  assert.equal(teacher.data.error, 'not_school_staff');
+  const newcomer = await app.client().login('9811199999', 'school');
+  assert.equal((await newcomer.get('/api/me')).data.portal, 'school');
   const made = await guest.post('/api/setup', {
     schoolName: 'Asli School', adminName: 'Real Owner', phone: '9855566677', defaultLang: 'hi', qrMode: 'per_student',
   });
@@ -314,6 +320,38 @@ test('a username-only account stays separate and is never linked automatically',
   assert.equal(userForIdentity({ clerkUserId: 'user_a' }).id, first.id);
   assert.equal(first.phone, null);
   assert.equal(app.db.get('SELECT COUNT(*) AS n FROM guardian_link WHERE user_id IN (?,?)', first.id, second.id).n, 0);
+});
+
+test('the school office has its own sign-in', async () => {
+  // A parent or teacher is turned away, and gets no session.
+  const outsider = app.client();
+  const sent = await outsider.post('/api/auth/otp/send', { phone: '9866677788' });
+  const real = app.db.get('SELECT id FROM school WHERE is_demo = 0');
+  assert.ok(real, 'a school exists, so the first-run exception does not apply');
+  const refused = await outsider.post('/api/auth/otp/verify', { phone: '9866677788', code: sent.data.demoCode, portal: 'school' });
+  assert.equal(refused.status, 403);
+  assert.equal(refused.data.error, 'not_school_staff');
+  assert.equal((await outsider.get('/api/me')).data.user, null);
+
+  // An admin who comes through the teacher and parent door has no office rights.
+  const wrongDoor = await app.client().login(DEMO.admin);
+  assert.equal((await wrongDoor.get('/api/me')).data.portal, 'family');
+  const blocked = await wrongDoor.get(`/api/school?school=${ids.school}`);
+  assert.equal(blocked.status, 403);
+  assert.equal(blocked.data.error, 'school_sign_in_needed');
+  assert.equal((await wrongDoor.get(`/api/classes/${ids.class7}`)).status, 403);
+  assert.equal((await wrongDoor.get('/api/school/providers')).status, 403);
+
+  const office = await app.client().login(DEMO.admin, 'school');
+  assert.equal((await office.get('/api/me')).data.portal, 'school');
+  assert.equal((await office.get(`/api/school?school=${ids.school}`)).status, 200);
+});
+
+test('a sample person who signs in by demo phone code stays in the demo switcher', async () => {
+  const guest = app.client();
+  await app.client().login(DEMO.lakshmi);
+  const { personas } = (await guest.get('/api/demo/personas')).data;
+  assert.ok(personas.some((p) => p.key === 'lakshmi'));
 });
 
 test('demo data can be reset', async () => {

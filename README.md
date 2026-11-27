@@ -30,6 +30,15 @@ Demo mode is on by default: a sample school, one-tap role switching and "simulat
 
 Without an NVIDIA key, a note you record yourself keeps the browser's own live transcript where the browser has one (Chrome, Edge), and translation shows as unavailable. The sample notes carry stored transcripts and translations, so the cross-language flow always works. Sample audio is a computer voice unless real recordings are placed in `demo/sample-notes/`.
 
+## Two sign-ins
+
+| Who | Address | Opens |
+|---|---|---|
+| Teachers and parents | `/login` | Classes and recording, or the child's diary |
+| School office (principal, clerk) | `/school/login` | School settings, teachers and classes, reports, first-run setup |
+
+The office sign-in admits only accounts the school lists as office staff, or a newcomer on a fresh install who is about to create the school. The server applies office rights only to sessions that came through it: someone who is both a principal and a teacher signs in at the office for school work and at the other door to record notes.
+
 ## Install it on a phone
 
 Vidya Vaani is a Progressive Web App: it installs from the browser, opens full screen from the home screen, and keeps working on a weak network.

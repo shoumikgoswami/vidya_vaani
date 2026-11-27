@@ -182,5 +182,20 @@
   "install_menu_open": "బ్రౌజర్ మెనూ తెరవండి.",
   "install_menu_choose": "\"Install app\" లేదా \"Add to Home screen\" ఎంచుకోండి.",
   "install_menu_confirm": "\"Install\" నొక్కండి.",
-  "install_inapp": "WhatsApp లేదా వేరే యాప్ నుండి తెరిచారా? ముందు Chrome లో తెరవండి."
+  "install_inapp": "WhatsApp లేదా వేరే యాప్ నుండి తెరిచారా? ముందు Chrome లో తెరవండి.",
+  "family_signin": "టీచర్ లేదా తల్లిదండ్రులు",
+  "family_signin_detail": "నోట్ చెప్పండి, లేదా మీ బిడ్డ సందేశాలు వినండి",
+  "school_signin": "స్కూల్ ఆఫీస్",
+  "school_signin_detail": "ప్రిన్సిపల్ లేదా ఆఫీస్ సిబ్బంది",
+  "family_login_title": "టీచర్, తల్లిదండ్రుల లాగిన్",
+  "school_login_title": "స్కూల్ ఆఫీస్ లాగిన్",
+  "school_login_guide": "ప్రిన్సిపల్, ఆఫీస్ సిబ్బంది కోసం.",
+  "school_login_link": "ఆఫీస్ సిబ్బందా? ఇక్కడ లాగిన్ అవ్వండి",
+  "family_login_link": "టీచర్ లేదా తల్లిదండ్రులా? ఇక్కడ లాగిన్ అవ్వండి",
+  "use_other_account": "వేరే ఖాతా వాడండి",
+  "family_only_notice": "ఇది టీచర్, తల్లిదండ్రుల లాగిన్. ఆఫీస్ సిబ్బంది విడిగా లాగిన్ అవ్వాలి.",
+  "err_not_school_staff": "ఈ ఖాతా స్కూల్ ఆఫీస్‌లో నమోదు కాలేదు.",
+  "err_school_sign_in_needed": "దయచేసి స్కూల్ ఆఫీస్ లాగిన్ వాడండి.",
+  "fill_in": "దయచేసి నింపండి: {field}",
+  "no_classes_yet": "ఇంకా తరగతి లేదు. మొదటిది జోడించండి."
 }

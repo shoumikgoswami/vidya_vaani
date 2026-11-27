@@ -15,6 +15,21 @@ const signInLimit = limiter({ max: 30, windowMs: 15 * 60_000 });
 
 export const setupNeeded = () => !get('SELECT 1 FROM school WHERE is_demo = 0');
 
+const portalField = z.enum(['family', 'school']).default('family');
+
+/** The school office sign-in admits office staff only, or a newcomer about to create the school. */
+function admit(req, res, user, portal, method) {
+  if (portal === 'school') {
+    const roles = all('SELECT role FROM membership WHERE user_id = ? AND active = 1', user.id).map((m) => m.role);
+    // Someone who already teaches here is not the person setting up a school.
+    const founder = setupNeeded() && !roles.length;
+    if (!roles.includes('admin') && !founder) fail(403, 'not_school_staff');
+  }
+  createSession(req, res, user.id, portal);
+  audit(user.id, 'auth.login', { meta: { method, portal } });
+  res.json({ ok: true });
+}
+
 router.get('/config', (req, res) => {
   res.json({
     demoMode: config.demoMode,
@@ -39,23 +54,20 @@ router.post('/auth/otp/send', signInLimit, (req, res) => {
 });
 
 router.post('/auth/otp/verify', signInLimit, (req, res) => {
-  const { phone, code } = parse(z.object({ phone: z.string(), code: z.string().regex(/^\d{6}$/) }), req.body);
+  const { phone, code, portal } = parse(
+    z.object({ phone: z.string(), code: z.string().regex(/^\d{6}$/), portal: portalField }), req.body,
+  );
   const normalised = normalizePhone(phone) || fail(400, 'phone_invalid');
   verifyOtp(normalised, code);
-  const user = userForIdentity({ phones: [normalised] });
-  createSession(req, res, user.id);
-  audit(user.id, 'auth.login', { meta: { method: 'demo_otp' } });
-  res.json({ ok: true });
+  admit(req, res, userForIdentity({ phones: [normalised] }), portal, 'demo_otp');
 });
 
 router.post('/auth/clerk', signInLimit, async (req, res) => {
   const token = req.get('authorization')?.replace(/^Bearer\s+/i, '');
   if (!token) fail(401, 'clerk_token_missing');
+  const { portal } = parse(z.object({ portal: portalField }), req.body);
   const identity = await identityFromToken(token, `${req.protocol}://${req.get('host')}`);
-  const user = userForIdentity(identity);
-  createSession(req, res, user.id);
-  audit(user.id, 'auth.login', { meta: { method: 'clerk' } });
-  res.json({ ok: true });
+  admit(req, res, userForIdentity(identity), portal, 'clerk');
 });
 
 router.post('/auth/logout', (req, res) => {
@@ -81,6 +93,7 @@ export function describeMe(user) {
     user.id,
   );
   return {
+    portal: user.portal || 'family',
     user: { id: user.id, name: user.name, phone: user.phone, email: user.email, uiLang: user.ui_lang, isDemo: Boolean(user.is_demo) },
     memberships: memberships.map((m) => ({ ...m, isDemo: Boolean(m.isDemo) })),
     children: children.map((c) => ({ ...c, consented: Boolean(c.consented) })),
@@ -138,6 +151,8 @@ router.post('/setup', signInLimit, (req, res) => {
     created_at: now(),
   });
   insert('membership', { user_id: admin.id, school_id: schoolId, role: 'admin', admin_level: 'owner', created_at: now() });
+  // Whoever just created the school is now at the school office.
+  if (req.user) run(`UPDATE session SET portal = 'school' WHERE id = ?`, req.user.session_id);
   audit(admin.id, 'school.create', { schoolId, entity: 'school', entityId: schoolId });
   res.status(201).json({ schoolId, phone: admin.phone, signedIn: Boolean(req.user) });
 });

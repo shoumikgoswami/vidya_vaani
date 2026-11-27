@@ -428,5 +428,20 @@
   "install_menu_open": "Open the browser menu.",
   "install_menu_choose": "Choose Install app or Add to Home screen.",
   "install_menu_confirm": "Tap Install.",
-  "install_inapp": "Opened this from WhatsApp or another app? Open it in Chrome first."
+  "install_inapp": "Opened this from WhatsApp or another app? Open it in Chrome first.",
+  "family_signin": "Teacher or parent",
+  "family_signin_detail": "Record notes, or hear your child's notes",
+  "school_signin": "School office",
+  "school_signin_detail": "Principal or office staff",
+  "family_login_title": "Teacher and parent sign-in",
+  "school_login_title": "School office sign-in",
+  "school_login_guide": "For the principal and school office staff.",
+  "school_login_link": "Office staff sign-in",
+  "family_login_link": "Teacher or parent sign-in",
+  "use_other_account": "Use another account",
+  "family_only_notice": "This is the teacher and parent sign-in. School office staff sign in separately.",
+  "err_not_school_staff": "This account is not registered as school office staff.",
+  "err_school_sign_in_needed": "Please use the school office sign-in.",
+  "fill_in": "Please fill in: {field}",
+  "no_classes_yet": "No class yet. Add the first one."
 }

@@ -38,6 +38,12 @@ export function account(ctx) {
       navigate('/me', { replace: true });
     }),
     installState() !== 'installed' && row('download-simple', t('install_title'), t('install_body'), install),
+    // The other sign-in, for someone who works at the office and also teaches or has a child here.
+    store.me.portal === 'school'
+      ? store.me.memberships.some((m) => m.role === 'teacher') || children.length
+        ? row('users', t('family_signin'), null, () => navigate('/login')) : null
+      : store.me.memberships.some((m) => m.role === 'admin')
+        ? row('chalkboard-teacher', t('school_signin'), null, () => navigate('/school/login')) : null,
     row('info', t('help_title'), null, () => navigate('/help')),
     children.length > 0 && h('details', { class: 'card' },
       h('summary', {}, h('strong', {}, t('privacy_title'))),

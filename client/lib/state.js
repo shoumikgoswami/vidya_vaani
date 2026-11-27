@@ -10,13 +10,16 @@ export async function refreshMe() {
 
 export const signedIn = () => Boolean(store.me?.user);
 
+export const atSchoolOffice = () => signedIn() && store.me.portal === 'school';
+
+/** The school office sign-in opens the office; the other one opens teaching and the diary. */
 export function roles() {
   const me = store.me;
   if (!me?.user) return [];
+  if (me.portal === 'school') return me.memberships.some((m) => m.role === 'admin') ? ['admin'] : [];
   const list = [];
   if (me.memberships.some((m) => m.role === 'teacher')) list.push('teacher');
   if (me.children.length) list.push('parent');
-  if (me.memberships.some((m) => m.role === 'admin')) list.push('admin');
   return list;
 }
 
@@ -28,7 +31,13 @@ export function currentRole() {
 
 export const setRole = (role) => localStorage.setItem('vv.role', role);
 
-export const homeFor = (role = currentRole()) => ({ teacher: '/t', parent: '/p', admin: '/admin' })[role] || (signedIn() ? '/p' : '/');
+export function homeFor(role = currentRole()) {
+  const home = { teacher: '/t', parent: '/p', admin: '/admin' }[role];
+  if (home) return home;
+  if (!signedIn()) return '/';
+  // At the office with no school yet: create one.
+  return atSchoolOffice() ? '/setup' : '/p';
+}
 
 export const membershipFor = (role) => store.me?.memberships?.find((m) => m.role === role) || null;
 

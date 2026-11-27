@@ -8,8 +8,14 @@ export const membershipsFor = (userId) =>
 export const membership = (userId, schoolId, role) =>
   get('SELECT * FROM membership WHERE user_id = ? AND school_id = ? AND role = ? AND active = 1', userId, schoolId, role);
 
+/** Office rights apply only to a session that came through the school office sign-in. */
+export const adminMembership = (user, schoolId) =>
+  (user.portal === 'school' ? membership(user.id, schoolId, 'admin') : undefined);
+
 export function requireAdmin(user, schoolId) {
-  return membership(user.id, schoolId, 'admin') || fail(403, 'forbidden');
+  const admin = membership(user.id, schoolId, 'admin') || fail(403, 'forbidden');
+  if (user.portal !== 'school') fail(403, 'school_sign_in_needed');
+  return admin;
 }
 
 export function loadClass(classId) {
@@ -36,7 +42,7 @@ export function requireTeacherOfClass(user, classId) {
 /** Students, stickers, QR rotation, receipts: the class's teachers and school admins. */
 export function requireClassManager(user, classId) {
   const cls = loadClass(classId);
-  const m = teachingMembership(user.id, cls) || membership(user.id, cls.school_id, 'admin') || fail(403, 'forbidden');
+  const m = teachingMembership(user.id, cls) || adminMembership(user, cls.school_id) || fail(403, 'forbidden');
   return { cls, membership: m };
 }
 
@@ -51,7 +57,7 @@ export function requireApprover(user, classId) {
   const classTeacher = get(
     `SELECT * FROM membership WHERE id = ? AND user_id = ? AND active = 1`, cls.class_teacher_id, user.id,
   );
-  return { cls, membership: classTeacher || membership(user.id, cls.school_id, 'admin') || fail(403, 'forbidden') };
+  return { cls, membership: classTeacher || adminMembership(user, cls.school_id) || fail(403, 'forbidden') };
 }
 
 export const activeLink = (userId, studentId) =>

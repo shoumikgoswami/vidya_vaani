@@ -135,13 +135,26 @@ export function field(label, control, help) {
 
 export const formData = (form) => Object.fromEntries(new FormData(form));
 
+/** Names the first empty required field, aloud-friendly, instead of a vague server error. */
+function firstMissing(el) {
+  const fields = [...el.querySelectorAll('[required]')];
+  for (const control of fields) control.removeAttribute('aria-invalid');
+  const empty = fields.find((control) => !control.value.trim());
+  if (!empty) return false;
+  empty.setAttribute('aria-invalid', 'true');
+  empty.focus();
+  const label = empty.closest('.field')?.querySelector('span')?.textContent || empty.name;
+  toast(t('fill_in', { field: label }), true);
+  return true;
+}
+
 export function form(onSubmit, ...children) {
   const el = h('form', { class: 'stack', novalidate: true });
   add(el, ...children);
   el.addEventListener('submit', async (event) => {
     event.preventDefault();
     const submit = el.querySelector('[type=submit]');
-    if (submit?.disabled) return;
+    if (submit?.disabled || firstMissing(el)) return;
     if (submit) submit.disabled = true;
     try {
       await onSubmit(formData(el), el);

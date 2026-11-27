@@ -26,11 +26,11 @@ const cookieOptions = (req, maxAgeMs, httpOnly) => ({
 
 const lifetime = () => config.sessionDays * 86_400_000;
 
-export function createSession(req, res, userId) {
+export function createSession(req, res, userId, portal = 'family') {
   const token = crypto.randomBytes(32).toString('base64url');
   run(
-    'INSERT INTO session (id, user_id, device_label, created_at, last_seen_at, expires_at) VALUES (?,?,?,?,?,?)',
-    sha256(token), userId, String(req.headers['user-agent'] || '').slice(0, 120), now(), now(), Date.now() + lifetime(),
+    'INSERT INTO session (id, user_id, device_label, created_at, last_seen_at, expires_at, portal) VALUES (?,?,?,?,?,?,?)',
+    sha256(token), userId, String(req.headers['user-agent'] || '').slice(0, 120), now(), now(), Date.now() + lifetime(), portal,
   );
   res.cookie(SESSION_COOKIE, token, cookieOptions(req, lifetime(), true));
 }
@@ -47,7 +47,7 @@ export function sessionMiddleware(req, res, next) {
   req.user = null;
   if (token) {
     const row = get(
-      `SELECT u.*, s.id AS session_id, s.last_seen_at FROM session s JOIN user u ON u.id = s.user_id
+      `SELECT u.*, s.id AS session_id, s.last_seen_at, s.portal FROM session s JOIN user u ON u.id = s.user_id
        WHERE s.id = ? AND s.expires_at > ?`,
       sha256(token), Date.now(),
     );

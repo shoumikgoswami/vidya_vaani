@@ -17,15 +17,17 @@ export async function actAs(persona) {
 }
 
 function personaList(after) {
-  const box = h('div', { class: 'list' }, skeletons(3));
+  const box = h('div', { class: 'stack' }, skeletons(3));
   api('/demo/personas').then(({ personas }) => {
     box.textContent = '';
-    add(box, personas.map((p) =>
-      h('button', {
-        type: 'button', class: 'item',
-        onclick: () => actAs(p).then(after).catch(showError),
-      }, avatar(p.name), h('span', { class: 'grow' }, h('strong', {}, p.name), h('span', { class: 'muted small' }, roleLabel(p))),
-      icon('caret-right', { flip: true }))));
+    const row = (p) => h('button', {
+      type: 'button', class: 'item',
+      onclick: () => actAs(p).then(after).catch(showError),
+    }, avatar(p.name), h('span', { class: 'grow' }, h('strong', {}, p.name), h('span', { class: 'muted small' }, roleLabel(p))),
+    icon('caret-right', { flip: true }));
+    for (const [key, group] of [['family_signin', personas.filter((p) => p.role !== 'admin')], ['school_signin', personas.filter((p) => p.role === 'admin')]]) {
+      add(box, h('h3', {}, t(key)), h('div', { class: 'list' }, group.map(row)));
+    }
   }).catch((error) => {
     box.textContent = '';
     showError(error);
@@ -72,6 +74,11 @@ export function demoSheet() {
   ]);
 }
 
+const doorway = (href, glyph, title, detail) =>
+  h('a', { class: 'item doorway', href }, h('span', { class: 'avatar' }, icon(glyph, { size: 28 })),
+    h('span', { class: 'grow' }, h('strong', {}, t(title)), h('span', { class: 'muted small' }, t(detail))),
+    icon('caret-right', { flip: true }));
+
 export async function home(ctx) {
   if (signedIn()) return navigate(homeFor(), { replace: true });
   const { demoMode, setupNeeded } = store.config;
@@ -82,8 +89,11 @@ export async function home(ctx) {
     h('div', { class: 'welcome' }, h('h1', {}, t('app_tagline')), h('p', { class: 'muted' }, t('app_subtitle'))),
     guide('hand-tap', 'home_guide'),
     h('div', { class: 'actions' },
-      button(t('scan_qr'), { iconName: 'qr-code', kind: 'primary big block', href: '/scan' }),
-      button(t('sign_in'), { iconName: 'phone', kind: 'outline big block', href: '/login' })),
+      button(t('scan_qr'), { iconName: 'qr-code', kind: 'primary big block', href: '/scan' })),
+    h('section', { class: 'stack', 'aria-labelledby': 'signin-title' },
+      h('h2', { id: 'signin-title' }, t('sign_in')),
+      doorway('/login', 'users', 'family_signin', 'family_signin_detail'),
+      doorway('/school/login', 'chalkboard-teacher', 'school_signin', 'school_signin_detail')),
     installCard({ onLeave: ctx.onLeave }),
     demoMode && h('section', { class: 'stack', 'aria-labelledby': 'demo-title' },
       h('div', { class: 'row' }, h('h2', { class: 'grow', id: 'demo-title' }, t('demo_try')), speakButton(t('demo_try_help'), languageOf('demo_try_help'))),

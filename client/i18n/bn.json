@@ -182,5 +182,20 @@
   "install_menu_open": "ব্রাউজারের মেনু খুলুন।",
   "install_menu_choose": "\"Install app\" বা \"Add to Home screen\" বাছুন।",
   "install_menu_confirm": "\"Install\" টিপুন।",
-  "install_inapp": "WhatsApp বা অন্য অ্যাপ থেকে খুলেছেন? আগে Chrome-এ খুলুন।"
+  "install_inapp": "WhatsApp বা অন্য অ্যাপ থেকে খুলেছেন? আগে Chrome-এ খুলুন।",
+  "family_signin": "শিক্ষক বা অভিভাবক",
+  "family_signin_detail": "নোট বলুন, বা সন্তানের বার্তা শুনুন",
+  "school_signin": "স্কুল অফিস",
+  "school_signin_detail": "প্রধান শিক্ষক বা অফিস কর্মী",
+  "family_login_title": "শিক্ষক ও অভিভাবক সাইন ইন",
+  "school_login_title": "স্কুল অফিস সাইন ইন",
+  "school_login_guide": "প্রধান শিক্ষক ও অফিস কর্মীদের জন্য।",
+  "school_login_link": "অফিস কর্মী? এখানে সাইন ইন করুন",
+  "family_login_link": "শিক্ষক বা অভিভাবক? এখানে সাইন ইন করুন",
+  "use_other_account": "অন্য অ্যাকাউন্ট ব্যবহার করুন",
+  "family_only_notice": "এটি শিক্ষক ও অভিভাবকের সাইন ইন। অফিস কর্মীরা আলাদা সাইন ইন করেন।",
+  "err_not_school_staff": "এই অ্যাকাউন্ট স্কুল অফিসে নথিভুক্ত নয়।",
+  "err_school_sign_in_needed": "স্কুল অফিস সাইন ইন ব্যবহার করুন।",
+  "fill_in": "অনুগ্রহ করে পূরণ করুন: {field}",
+  "no_classes_yet": "এখনো কোনো ক্লাস নেই। প্রথমটি যোগ করুন।"
 }

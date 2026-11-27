@@ -36,7 +36,9 @@ export function userForIdentity({ clerkUserId = null, phones = [], emails = [], 
       });
       user = userById(id);
     } else {
-      const patch = { is_demo: 0 };
+      // A Clerk sign-in is a real person: their account leaves the demo switcher. The demo phone
+      // login proves nothing, so a sample person signing in that way stays a sample person.
+      const patch = clerkUserId ? { is_demo: 0 } : {};
       if (clerkUserId && !user.clerk_user_id) patch.clerk_user_id = clerkUserId;
       if (name && !user.name) patch.name = name;
       if (!user.phone && phones[0] && !userByPhone(phones[0])) patch.phone = phones[0];

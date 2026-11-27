@@ -182,5 +182,20 @@
   "install_menu_open": "உலாவி பட்டியைத் திறங்கள்.",
   "install_menu_choose": "\"Install app\" அல்லது \"Add to Home screen\" தேர்ந்தெடுங்கள்.",
   "install_menu_confirm": "\"Install\" தட்டுங்கள்.",
-  "install_inapp": "WhatsApp அல்லது வேறு ஆப்பிலிருந்து திறந்தீர்களா? முதலில் Chrome-இல் திறங்கள்."
+  "install_inapp": "WhatsApp அல்லது வேறு ஆப்பிலிருந்து திறந்தீர்களா? முதலில் Chrome-இல் திறங்கள்.",
+  "family_signin": "ஆசிரியர் அல்லது பெற்றோர்",
+  "family_signin_detail": "குறிப்பு பதிவு செய்ய, அல்லது குழந்தையின் செய்தி கேட்க",
+  "school_signin": "பள்ளி அலுவலகம்",
+  "school_signin_detail": "தலைமையாசிரியர் அல்லது அலுவலர்",
+  "family_login_title": "ஆசிரியர், பெற்றோர் உள்நுழைவு",
+  "school_login_title": "பள்ளி அலுவலக உள்நுழைவு",
+  "school_login_guide": "தலைமையாசிரியர், அலுவலர்களுக்கு.",
+  "school_login_link": "அலுவலரா? இங்கே உள்நுழையுங்கள்",
+  "family_login_link": "ஆசிரியரா, பெற்றோரா? இங்கே உள்நுழையுங்கள்",
+  "use_other_account": "வேறு கணக்கைப் பயன்படுத்து",
+  "family_only_notice": "இது ஆசிரியர், பெற்றோர் உள்நுழைவு. அலுவலர்கள் தனியாக உள்நுழைய வேண்டும்.",
+  "err_not_school_staff": "இந்தக் கணக்கு பள்ளி அலுவலகத்தில் பதிவாகவில்லை.",
+  "err_school_sign_in_needed": "பள்ளி அலுவலக உள்நுழைவைப் பயன்படுத்துங்கள்.",
+  "fill_in": "நிரப்புங்கள்: {field}",
+  "no_classes_yet": "இன்னும் வகுப்பு இல்லை. முதல் வகுப்பைச் சேருங்கள்."
 }

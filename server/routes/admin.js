@@ -48,7 +48,7 @@ router.patch('/school', (req, res) => {
 });
 
 router.get('/school/providers', (req, res) => {
-  if (!membershipsFor(req.user.id).some((m) => m.role === 'admin')) fail(403, 'forbidden');
+  if (req.user.portal !== 'school' || !membershipsFor(req.user.id).some((m) => m.role === 'admin')) fail(403, 'forbidden');
   res.json(providerStatus());
 });
 
@@ -128,7 +128,7 @@ const classTeachers = (classId) =>
 router.get('/classes', (req, res) => {
   const schoolId = intParam(req.query.school);
   if (!membershipsFor(req.user.id).some((m) => m.school_id === schoolId)) fail(403, 'forbidden');
-  res.json({ classes: visibleClasses(req.user.id, schoolId).map((c) => ({ ...c, teachers: classTeachers(c.id) })) });
+  res.json({ classes: visibleClasses(req.user, schoolId).map((c) => ({ ...c, teachers: classTeachers(c.id) })) });
 });
 
 const classInput = z.object({

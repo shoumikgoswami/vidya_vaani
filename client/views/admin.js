@@ -199,7 +199,7 @@ export function people(ctx) {
               button(t('open_class'), { kind: 'outline small', href: `/t/class/${c.id}` }),
               button(t('edit_class'), { kind: 'outline small', onClick: () => classSheet(data.id, data.teachers, c) })),
             c.students > 0 && button(t('promote'), { iconName: 'arrow-up', kind: 'small', href: `/admin/promote/${c.id}` })))
-          : empty('chalkboard-teacher', 'no_classes')),
+          : empty('chalkboard-teacher', 'no_classes_yet')),
     };
     add(box, segmented([['teachers', t('teachers')], ['classes', t('classes')]], tab, (v) => {
       tab = v;

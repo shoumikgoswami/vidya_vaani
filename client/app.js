@@ -2,14 +2,14 @@
 import { h, icon, replace } from './lib/dom.js';
 import { api } from './lib/api.js';
 import { t, setLanguage, initialLanguage, hasChosenLanguage, language } from './lib/i18n.js';
-import { store, signedIn, refreshMe, currentRole, homeFor, navigate, roles, setRole } from './lib/state.js';
+import { store, signedIn, refreshMe, currentRole, homeFor, navigate, roles, setRole, atSchoolOffice } from './lib/state.js';
 import { stopSpeaking } from './lib/speak.js';
 import * as outbox from './lib/outbox.js';
 import { skeletons, failure, languageSheet, nativeName, toast } from './lib/ui.js';
 import { chooseLanguage } from './app-language.js';
 import './lib/install.js';
 import { home, help, demoSheet } from './views/home.js';
-import { login, setup } from './views/auth.js';
+import { login, schoolLogin, setup } from './views/auth.js';
 import { scan, sticker, schoolSticker } from './views/scan.js';
 import { record } from './views/record.js';
 import { confirm } from './views/confirm.js';
@@ -23,6 +23,7 @@ import { school, schoolQr, people, promote, reports } from './views/admin.js';
 const ROUTES = [
   ['/', home],
   ['/login', login],
+  ['/school/login', schoolLogin],
   ['/setup', setup],
   ['/help', help],
   ['/scan', scan, { title: 'scan_qr' }],
@@ -82,7 +83,8 @@ function drawTopbar(route) {
     onclick: () => (depth > 0 ? history.back() : navigate(homeFor())),
   }, icon('arrow-left', { flip: true }));
   const brand = h('a', { class: 'brand', href: signedIn() ? homeFor() : '/' },
-    h('img', { src: '/img/icon.svg', alt: '', width: 36, height: 36 }), h('span', {}, 'Vidya Vaani'));
+    h('img', { src: '/img/icon.svg', alt: '', width: 36, height: 36 }),
+    h('span', {}, 'Vidya Vaani', atSchoolOffice() && h('small', {}, t('school_signin'))));
   replace($('topbar'), h('div', { class: 'bar' },
     root ? brand : [back, h('span', { class: 'bar-title' }, route?.options.title ? t(route.options.title) : '')],
     h('button', { type: 'button', class: 'langbtn', 'aria-label': t('app_language'), onclick: () => languageSheet(t('app_language'), language(), chooseLanguage) },
@@ -94,7 +96,7 @@ let inboxCount = 0;
 function drawTabs() {
   const path = location.pathname;
   const area = path.startsWith('/admin') ? 'admin' : path.startsWith('/t') ? 'teacher' : path.startsWith('/p') ? 'parent' : currentRole();
-  const hidden = !signedIn() || !area || !roles().includes(area) || /^\/(t\/record|t\/confirm|s\/|k\/|login|setup)/.test(path);
+  const hidden = !signedIn() || !area || !roles().includes(area) || /^\/(t\/record|t\/confirm|s\/|k\/|login|school\/|setup)/.test(path);
   if (hidden) return replace($('tabs'));
   replace($('tabs'), h('div', { class: 'tabs-inner' }, TABS[area].map(([href, glyph, key]) =>
     h('a', { class: 'tab', href, 'aria-current': path === href ? 'page' : undefined, onclick: () => setRole(area) },
@@ -129,8 +131,9 @@ async function render(state = {}) {
   const main = $('main');
 
   if (!route) return navigate(homeFor(), { replace: true });
-  if (route.options.auth && !signedIn()) {
-    return navigate(`/login?next=${encodeURIComponent(path + location.search)}`, { replace: true });
+  const office = route.options.role === 'admin';
+  if (route.options.auth && (!signedIn() || (office && !atSchoolOffice()))) {
+    return navigate(`${office ? '/school/login' : '/login'}?next=${encodeURIComponent(path + location.search)}`, { replace: true });
   }
   if (route.options.role) {
     if (!roles().includes(route.options.role)) return navigate(signedIn() ? homeFor() : '/', { replace: true });

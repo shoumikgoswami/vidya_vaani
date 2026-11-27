@@ -20,6 +20,7 @@ These override the sections below where they differ.
 | Parent linking (J5) | Verified phone matches | Verified **phone or email** matches. The teacher can record the parent's Gmail |
 | LLM chain (5.4, 5.5) | NVIDIA model, NVIDIA fallback, rules | NVIDIA model, NVIDIA fallback, **free OpenRouter models**, rules |
 | LLM choice (5.4) | Llama 4 Maverick / Gemma 4 / Qwen / Mistral Large 3 | Those NVIDIA ids were no longer listed on 27 Nov. Chosen by live test (`docs/model-eval.md`): `nvidia/nemotron-3.5-bolt-e4b`, then `minimaxai/minimax-m3.1-flash` |
+| Sign-in pages (4, S2) | One login | Two: `/login` for teachers and parents, `/school/login` for school office staff. Office rights need a session from the office sign-in |
 | Runtime (11) | Node 20 | Node 22 |
 | Parakeet coverage (5.2, 6) | Hindi, Bengali, Tamil | Checked live on 27 Nov: the hosted function transcribes Hindi and English and refuses `bn-IN` and `ta-IN`. Bengali and Tamil go to Whisper |
 | Speech requests (5.2) | StreamingRecognize for large audio | Notes are capped at 2 minutes and sent as FLAC when the WAV exceeds 3.5 MB, so only `Recognize` is used |

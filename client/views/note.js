@@ -55,6 +55,15 @@ export function words(note, { onRetry } = {}) {
   return box;
 }
 
+function answerButton(ctx, reply) {
+  const slot = h('div', {});
+  slot.append(button(t('answer_by_voice'), {
+    iconName: 'microphone', kind: 'outline block',
+    onClick: () => replace(slot, voiceReply({ noteId: reply.id, language: speakLanguage(), onLeave: ctx.onLeave, label: t('answer_by_voice') })),
+  }));
+  return slot;
+}
+
 function replyThread(ctx, note) {
   if (!note.replies.length) return null;
   return h('section', { class: 'stack' }, h('h2', {}, t('replies')),
@@ -62,7 +71,8 @@ function replyThread(ctx, note) {
       h('div', { class: 'row' }, h('strong', { class: 'grow' }, r.mine ? t('you') : r.authorName),
         h('span', { class: 'muted small' }, formatDate(r.createdAt))),
       r.audioUrl && player(r.audioUrl, { durationMs: r.durationMs, onLeave: ctx.onLeave, onPlay: () => !r.mine && markListened(r.id) }),
-      words(r))));
+      words(r),
+      note.viewer !== 'parent' && r.kind === 'parent_reply' && !r.mine && answerButton(ctx, r))));
 }
 
 function receipts(noteId) {
@@ -125,7 +135,7 @@ export async function noteView(ctx) {
           await load();
         },
       }),
-      parent && h('button', {
+      parent && Boolean(note.text || note.translation || note.english) && h('button', {
         type: 'button', class: 'chip',
         onclick: () => languageSheet(t('read_in'), note.viewLang, (code) => {
           viewLang = code;
@@ -151,9 +161,9 @@ export async function noteView(ctx) {
     replace(bottom,
       replyThread(ctx, note),
       note.publishedAt && !parent && note.kind === 'teacher_note' && receipts(id),
-      note.publishedAt && (parent || note.viewer === 'teacher') && voiceReply({
+      note.publishedAt && parent && voiceReply({
         noteId: id, studentId: child?.studentId, onLeave: ctx.onLeave,
-        language: parent ? store.me.children.find((c) => c.studentId === child?.studentId)?.readLang || language() : speakLanguage(),
+        language: store.me.children.find((c) => c.studentId === child?.studentId)?.readLang || language(),
         onSent: () => setTimeout(() => ctx.alive() && load(), 1500),
       }));
 

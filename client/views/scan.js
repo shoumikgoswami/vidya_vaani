@@ -186,8 +186,10 @@ export async function sticker(ctx) {
   }
   if (access === 'rejected') return add(ctx.root, empty('lock', 'link_rejected'));
   if (access === 'manage') {
-    return add(ctx.root, empty('chalkboard-teacher', 'admin_cannot_record',
-      button(t('open_class'), { kind: 'primary block', href: `/t/class/${student.classId}` })));
+    const office = store.me.portal === 'school';
+    return add(ctx.root, empty('chalkboard-teacher', 'admin_cannot_record', office
+      ? button(t('open_class'), { kind: 'primary block', href: `/t/class/${student.classId}` })
+      : button(t('school_signin'), { kind: 'primary block', href: `/school/login?next=/t/class/${student.classId}` })));
   }
   askToLink(ctx, token, student);
 }
@@ -213,6 +215,6 @@ export async function schoolSticker(ctx) {
     await refreshMe().catch(() => {});
     return navigate('/p', { replace: true });
   }
-  if (access === 'manage') return navigate('/admin', { replace: true });
+  if (access === 'manage') return navigate(store.me.portal === 'school' ? '/admin' : '/school/login', { replace: true });
   add(ctx.root, empty('users', 'school_unlinked'), button(t('scan_qr'), { iconName: 'qr-code', kind: 'primary block', href: '/scan' }));
 }

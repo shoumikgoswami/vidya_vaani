@@ -66,9 +66,9 @@ router.get('/demo/personas', demoOnly, (_req, res) => {
 router.post('/demo/login', demoOnly, limiter({ max: 120, windowMs: 60_000 }), (req, res) => {
   const { userId } = parse(z.object({ userId: z.number().int() }), req.body);
   if (!demoUsers().some((u) => u.id === userId)) fail(403, 'forbidden');
-  createSession(req, res, userId);
-  audit(userId, 'auth.login', { meta: { method: 'demo_switch' } });
   const persona = DEMO_PERSONAS.find((p) => p.phone === get('SELECT phone FROM user WHERE id = ?', userId).phone);
+  createSession(req, res, userId, persona?.role === 'admin' ? 'school' : 'family');
+  audit(userId, 'auth.login', { meta: { method: 'demo_switch' } });
   res.json({ ok: true, persona: persona && { ...persona, phone: undefined } });
 });
 

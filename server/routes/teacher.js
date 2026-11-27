@@ -10,7 +10,7 @@ import { get, all, run, insert, update, tx } from '../db/index.js';
 import { parse, fail, intParam, normalizePhone, normalizeEmail, randomToken, now, audit } from '../lib/util.js';
 import { requireUser } from '../auth/session.js';
 import {
-  requireClassManager, requireStudentManager, requireApprover, teachingMembership, membership, membershipsFor,
+  requireClassManager, requireStudentManager, requireApprover, teachingMembership, membershipsFor, adminMembership,
 } from '../auth/authorize.js';
 import { userByPhone, userByEmail, autoLinkGuardian } from '../auth/users.js';
 import { similarNames, nameKey } from '../nlp/names.js';
@@ -46,8 +46,9 @@ const studentsOf = (classId) =>
   );
 
 /** The classes this person can open: assigned ones for teachers, all of the school for admins. */
-export function visibleClasses(userId, schoolId) {
-  const isAdmin = Boolean(membership(userId, schoolId, 'admin'));
+export function visibleClasses(user, schoolId) {
+  const userId = user.id;
+  const isAdmin = Boolean(adminMembership(user, schoolId));
   return all('SELECT * FROM class WHERE school_id = ? ORDER BY academic_year DESC, CAST(name AS INTEGER), name, section', schoolId)
     .map((cls) => ({ cls, teaching: teachingMembership(userId, cls) }))
     .filter((x) => isAdmin || x.teaching)
@@ -69,7 +70,7 @@ router.get('/classes/:id', (req, res) => {
   const teaches = Boolean(teachingMembership(req.user.id, cls));
   const school = get('SELECT id, name, qr_mode AS qrMode FROM school WHERE id = ?', cls.school_id);
   const isClassTeacher = cls.class_teacher_id === m.id;
-  const approver = isClassTeacher || Boolean(membership(req.user.id, cls.school_id, 'admin'));
+  const approver = isClassTeacher || Boolean(adminMembership(req.user, cls.school_id));
   const notes = all(
     `SELECT * FROM note WHERE class_id = ? AND kind = 'teacher_note' AND (author_user_id = ? OR (published_at IS NOT NULL AND ?))
      ORDER BY created_at DESC LIMIT 40`,
@@ -158,7 +159,7 @@ router.patch('/students/:id', (req, res) => {
 /** Deleting a child's data is an admin action (spec 13). */
 router.delete('/students/:id', (req, res) => {
   const student = get('SELECT * FROM student WHERE id = ?', intParam(req.params.id)) || fail(404, 'student_not_found');
-  if (!membership(req.user.id, student.school_id, 'admin')) fail(403, 'forbidden');
+  if (!adminMembership(req.user, student.school_id)) fail(403, 'forbidden');
   const onlyTheirs = all(
     `SELECT n.id, n.audio_path FROM note n JOIN note_recipient nr ON nr.note_id = n.id AND nr.student_id = ?
      WHERE NOT EXISTS (SELECT 1 FROM note_recipient o WHERE o.note_id = n.id AND o.student_id != ?)`,
@@ -257,7 +258,7 @@ function inboxFor(userId, classIds) {
 router.get('/inbox', (req, res) => {
   const classIds = membershipsFor(req.user.id)
     .filter((m) => m.role === 'teacher')
-    .flatMap((m) => visibleClasses(req.user.id, m.school_id).filter((c) => c.teaches).map((c) => c.id));
+    .flatMap((m) => visibleClasses(req.user, m.school_id).filter((c) => c.teaches).map((c) => c.id));
   res.json({ replies: inboxFor(req.user.id, [...new Set(classIds)]) });
 });
 

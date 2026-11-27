@@ -61,10 +61,10 @@ export async function startApp(env = {}) {
       upload: (url, form) => call('POST', url, { form }),
       patch: (url, body) => call('PATCH', url, { body }),
       del: (url) => call('DELETE', url),
-      async login(phone) {
+      async login(phone, portal = 'family') {
         const sent = await call('POST', '/api/auth/otp/send', { body: { phone } });
         if (sent.status !== 200) throw new Error(`otp send ${sent.status} ${sent.data.error}`);
-        const verified = await call('POST', '/api/auth/otp/verify', { body: { phone, code: sent.data.demoCode } });
+        const verified = await call('POST', '/api/auth/otp/verify', { body: { phone, code: sent.data.demoCode, portal } });
         if (verified.status !== 200) throw new Error(`otp verify ${verified.status}`);
         return this;
       },
