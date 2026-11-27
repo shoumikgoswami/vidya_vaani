@@ -36,7 +36,8 @@ const ROUTES = [
   ['/t/stickers/:id', stickers, { auth: true, wide: true }],
   ['/t/inbox', inbox, { auth: true, role: 'teacher' }],
   ['/t/note/:id', noteView, { auth: true }],
-  ['/p', diary, { auth: true, role: 'parent' }],
+  // No role needed: this is also where a brand-new account lands, with nothing linked yet.
+  ['/p', diary, { auth: true }],
   ['/p/note/:id', noteView, { auth: true, role: 'parent' }],
   ['/admin', school, { auth: true, role: 'admin', wide: true }],
   ['/admin/people', people, { auth: true, role: 'admin' }],

@@ -64,7 +64,11 @@ export async function diary(ctx) {
   const child = children.find((c) => c.studentId === asked) || children.find((c) => c.status === 'active') || children[0];
 
   if (!child) {
-    add(ctx.root, empty('qr-code', 'diary_empty', button(t('scan_qr'), { iconName: 'qr-code', kind: 'primary big block', href: '/scan' })));
+    add(ctx.root,
+      empty('qr-code', 'diary_empty', button(t('scan_qr'), { iconName: 'qr-code', kind: 'primary big block', href: '/scan' })),
+      // On a fresh install the first person to sign in may be here to create the school.
+      store.config.setupNeeded && !store.me.memberships.length
+        && button(t('setup_title'), { iconName: 'chalkboard-teacher', kind: 'outline block', href: '/setup' }));
     return speak(t('diary_empty'), languageOf('diary_empty'));
   }
 
