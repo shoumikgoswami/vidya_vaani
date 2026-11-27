@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { completeJson, llmAvailable } from '../providers/llm.js';
 import { lang } from '../../client/lib/languages.js';
 import { ruleExtract, TAG_TYPES } from './tags.js';
-import { isIsoDate, todayIst } from './dates.js';
+import { isIsoDate, todayIst, addDays } from './dates.js';
 import { numbersIn, numberAmbiguities } from './numbers.js';
 import { transliterate } from './names.js';
 
@@ -26,7 +26,7 @@ export const enrichSchema = z.object({
 const SYSTEM = `You tidy a school teacher's spoken note and extract its details.
 Return one JSON object: {"clean": string, "changes": string[], "tags": [{"type": "homework"|"fee"|"exam"|"event"|"holiday"|"notice", "subject": string|null, "dueDate": "YYYY-MM-DD"|null}], "entities": {"amounts": string[], "pages": string[], "dates": string[], "names": string[]}, "ambiguities": [{"what": string, "options": [string, string]}]}
 Rules for "clean": remove filler words and false starts, and fix obvious recognition errors using the class context. Keep the speaker's language, script, tone and any mixed-in English words. Do not translate. Do not add information. Never change a number, amount, date or name.
-Rules for dates: today's date is given. In a homework, fee or exam context "kal" means tomorrow.
+Rules for dates: take every date from the calendar given. A weekday name means the next such day after today, never today itself. In a homework, fee or exam context "kal" means tomorrow. Each tag takes the date said in its own part of the note.
 Rules for "ambiguities": only when the speaker gave two possible values for one number or date.`;
 
 /** The clean text must keep every number and every student name that was in the raw text. */
@@ -54,9 +54,12 @@ export async function enrich(raw, { langCode, today = todayIst(), names = [], sc
   };
   if (!llmAvailable()) return fromRules;
 
-  const weekday = new Date(`${today}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' });
+  const weekday = (iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' });
+  // Small models are poor at date arithmetic, so the coming days are spelled out.
+  const calendar = Array.from({ length: 8 }, (_x, i) => addDays(today, i + 1)).map((d) => `${weekday(d)} ${d}`).join(', ');
   const context = [
-    `Today: ${today} (${weekday}).`,
+    `Today: ${today} (${weekday(today)}).`,
+    `Calendar after today: ${calendar}.`,
     langCode ? `Language: ${lang(langCode).name}.` : '',
     school ? `School: ${school}.` : '',
     // First names only, to send the model as little as possible.

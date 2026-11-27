@@ -40,6 +40,7 @@ export async function identityFromToken(token, requestOrigin) {
     clerkUserId: user.id,
     phones: verified(user.phoneNumbers).map((p) => normalizePhone(p.phoneNumber)).filter(Boolean),
     emails: verified(user.emailAddresses).map((e) => normalizeEmail(e.emailAddress)).filter(Boolean),
-    name: [user.firstName, user.lastName].filter(Boolean).join(' ') || null,
+    // A username-only account has no verified phone or email, so it is never linked automatically.
+    name: [user.firstName, user.lastName].filter(Boolean).join(' ') || user.username || null,
   };
 }

@@ -38,7 +38,7 @@ Copy `.env.example` to `.env`, fill in what you have, then run `docker compose u
 |---|---|
 | `NVIDIA_API_KEY` ([build.nvidia.com](https://build.nvidia.com)) | Speech-to-text, clean-up, tags, translation, Hindi and English voices |
 | `OPENROUTER_API_KEY` ([openrouter.ai](https://openrouter.ai)) | Free models used when NVIDIA fails or is rate limited |
-| `CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` ([clerk.com](https://clerk.com)) | Sign-in with Google, email code or SMS OTP |
+| `CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` ([clerk.com](https://clerk.com)) | Sign-in with SMS OTP, Google, or a username and password |
 
 Then test the models and choose the best one:
 
@@ -48,11 +48,18 @@ docker compose exec app npm run models:test
 
 ### Clerk setup
 
+Three ways to register: **mobile number (SMS code)**, **Google**, or **username and password**.
+
 1. Create an application and copy both keys into `.env`.
-2. Under **User and authentication**, turn on **Phone number** (SMS verification code), **Email address** (verification code) and **Google**.
-3. Under **SMS**, add India to the allowed countries. New instances allow only the US and Canada.
-4. On a free development instance, Clerk sends about 20 real SMS a month. For testing use the test numbers `+1 201 555 0100` to `0199` with code `424242`.
-5. Real SMS in production needs Clerk's paid plan and your own domain.
+2. Under **User and authentication**, turn on **Phone number** (SMS verification code), **Google**, **Username** and **Password**.
+3. Make phone number and username **optional** at sign-up. If both are required, everyone has to give both, so they are no longer separate options. Check the sign-up screen afterwards: Clerk may still ask a phone sign-up for a password while Password is on.
+4. Lower the minimum password length. A long minimum is hard for parents who type slowly.
+5. To link parents by Gmail, also turn on **Email address**.
+6. Under **SMS**, add India to the allowed countries. New instances allow only the US and Canada.
+7. On a free development instance, Clerk sends about 20 real SMS a month. For testing use the test numbers `+1 201 555 0100` to `0199` with code `424242`.
+8. Real SMS in production needs Clerk's paid plan and your own domain.
+
+**How each option links to a child.** A verified phone number or email that matches the school's record links at once. A username proves nothing about who someone is, so a username-only parent waits for the teacher's approval. Teachers and admins are added by phone or email, so they should sign in with one of those.
 
 With Clerk keys set, the demo phone login is switched off. One-tap demo roles remain while `DEMO_MODE=true` and only ever reach the sample school's accounts.
 
@@ -70,7 +77,7 @@ The app ships 23 locales (the 22 scheduled languages and English). NVIDIA's free
 
 | Tier | Languages | Speech-to-text | Translation | Read aloud |
 |---|---|---|---|---|
-| A | Hindi, Bengali, Tamil, English | NVIDIA Parakeet (Hindi, Bengali, Tamil), Whisper | NVIDIA or OpenRouter model | Hindi, English: NVIDIA Magpie. Others: phone voice |
+| A | Hindi, Bengali, Tamil, English | Hindi: NVIDIA Parakeet, then Whisper. Bengali, Tamil, English: Whisper | NVIDIA or OpenRouter model | Hindi, English: NVIDIA Magpie. Others: phone voice |
 | B | Telugu, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Urdu | NVIDIA Whisper | Model | Phone voice |
 | C | Nepali, Assamese, Sanskrit, Sindhi | NVIDIA Whisper (weaker) | Model, with a "may be wrong" label for Sanskrit and Sindhi | Phone voice where present |
 | D | Odia, Konkani, Maithili, Dogri, Bodo, Santali, Manipuri, Kashmiri | Approximate transcript in a nearby language, or audio only | Model, with a "may be wrong" label for most | Text only |
@@ -87,7 +94,7 @@ Phone (plain JavaScript PWA, no build step)
         |
 Express server in one container, SQLite in the /data volume
   audio saved first -> job queue (35 requests/min per model, retries on 429)
-  ffmpeg 16 kHz -> NVIDIA Riva gRPC (Parakeet / Whisper) -> browser text -> audio only
+  ffmpeg 16 kHz -> NVIDIA Riva gRPC (Parakeet for Hindi / Whisper) -> browser text -> audio only
   one model call: clean-up + tags + dates   -> rules if every model fails
   one model call: all parents' languages, with names and numbers protected
   Web Push (keys generated on first start)

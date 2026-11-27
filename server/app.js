@@ -19,7 +19,8 @@ import { registerHandlers } from './jobs/handlers.js';
 
 function securityHeaders() {
   const clerk = config.clerk.enabled ? [`https://${clerkFrontendApi()}`] : [];
-  const challenge = config.clerk.enabled ? ['https://challenges.cloudflare.com'] : [];
+  // Clerk's bot protection loads from these in addition to the instance's own host.
+  const challenge = config.clerk.enabled ? ['https://challenges.cloudflare.com', 'https://*.protect.clerk.com'] : [];
   const https = config.publicBaseUrl.startsWith('https://');
   return helmet({
     crossOriginEmbedderPolicy: false,
@@ -30,7 +31,8 @@ function securityHeaders() {
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", ...clerk, ...challenge],
-        connectSrc: ["'self'", ...clerk, ...(config.clerk.enabled ? ['https://clerk-telemetry.com'] : [])],
+        // Clerk's bot check also probes its own domain on other ports.
+        connectSrc: ["'self'", ...clerk, ...challenge, ...(config.clerk.enabled ? ['https://*.protect.clerk.com:*', 'https://clerk-telemetry.com'] : [])],
         imgSrc: ["'self'", 'data:', 'blob:', ...(config.clerk.enabled ? ['https://img.clerk.com'] : [])],
         mediaSrc: ["'self'", 'data:', 'blob:'],
         styleSrc: ["'self'", "'unsafe-inline'"],

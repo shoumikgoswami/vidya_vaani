@@ -306,6 +306,16 @@ test('a parent can delete their data', async () => {
   assert.equal((await bimal.get(`/api/children/${ids.ravi}/notes`)).status, 401);
 });
 
+test('a username-only account stays separate and is never linked automatically', async () => {
+  const { userForIdentity } = await import('../server/auth/users.js');
+  const first = userForIdentity({ clerkUserId: 'user_a', name: 'asha_01' });
+  const second = userForIdentity({ clerkUserId: 'user_b', name: 'ravi_papa' });
+  assert.notEqual(first.id, second.id);
+  assert.equal(userForIdentity({ clerkUserId: 'user_a' }).id, first.id);
+  assert.equal(first.phone, null);
+  assert.equal(app.db.get('SELECT COUNT(*) AS n FROM guardian_link WHERE user_id IN (?,?)', first.id, second.id).n, 0);
+});
+
 test('demo data can be reset', async () => {
   assert.equal((await app.client().post('/api/demo/reset', {})).status, 200);
   assert.equal(app.db.get('SELECT COUNT(*) AS n FROM school WHERE is_demo = 1').n, 1);

@@ -4,6 +4,7 @@ import { parseDueDate, addDays } from '../server/nlp/dates.js';
 import { wordsToDigits, numberAmbiguities, numbersIn } from '../server/nlp/numbers.js';
 import { ruleExtract } from '../server/nlp/tags.js';
 import { similarNames } from '../server/nlp/names.js';
+import { scriptOk } from '../server/nlp/scripts.js';
 import { protect, restore } from '../server/nlp/placeholders.js';
 import { parsePerson, parseList } from '../server/nlp/formfill.js';
 
@@ -46,6 +47,19 @@ test('the rule engine tags a mixed Hindi note', () => {
     { type: 'fee', subject: null, dueDate: '2026-12-04' },
   ]);
   assert.deepEqual(found.entities.pages, ['12']);
+});
+
+test('two deadlines in one breath get their own dates', () => {
+  const found = ruleExtract('कल कविता याद करनी है और शुक्रवार तक फीस जमा करनी है', FRIDAY);
+  assert.deepEqual(found.tags.map((t) => [t.type, t.dueDate]), [['homework', '2026-11-28'], ['fee', '2026-12-04']]);
+});
+
+test('a translation that mixes in another Indian script is rejected', () => {
+  assert.ok(scriptOk('రేపటికి ⟦N1⟧ రూపాయల fees కట్టాలి.', 'te'));
+  assert.ok(!scriptOk('500 రూపాయల fees जमा చేయాలి', 'te'));
+  assert.ok(scriptOk('कल fees जमा करें।', 'hi'));
+  assert.ok(!scriptOk('Pay the fees tomorrow', 'ta'));
+  assert.ok(scriptOk('Pay the fees tomorrow', 'en'));
 });
 
 test('names match across scripts', () => {

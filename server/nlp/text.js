@@ -39,5 +39,6 @@ export const findWord = (text, words) => {
 export const tokens = (text) =>
   String(text ?? '').normalize('NFC').split(/[\s,.;:!?।॥۔"'()\[\]]+/u).filter(Boolean);
 
+/** Sentences, also split at "and": "homework tomorrow and fees by Friday" holds two dates. */
 export const sentences = (text) =>
-  String(text ?? '').split(/(?<=[.!?।॥۔])\s+|\n+/u).map((s) => s.trim()).filter(Boolean);
+  String(text ?? '').split(/(?<=[.!?।॥۔])\s+|\n+|\s+(?:and|aur|और|এবং|மேலும்|మరియు)\s+/u).map((s) => s.trim()).filter(Boolean);

@@ -9,6 +9,7 @@ import { fail, now, parseJson } from '../lib/util.js';
 import { lang, isLang } from '../../client/lib/languages.js';
 import { enqueue } from '../jobs/queue.js';
 import { todayIst } from '../nlp/dates.js';
+import { numbersIn } from '../nlp/numbers.js';
 
 export const audioUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024, files: 1 } }).single('audio');
 
@@ -217,6 +218,8 @@ export function presentNote(note, { viewLang, forTeacher = false } = {}) {
   if (forTeacher) {
     out.heard = heardSummary(note.id);
     out.today = todayIst();
+    // For the read-back: spoken number words count as numbers too.
+    out.numbers = numbersIn(shownText(note));
   }
   return out;
 }

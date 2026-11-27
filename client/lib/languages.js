@@ -2,7 +2,8 @@
 // Shared by the browser and the server, so keep it free of platform APIs.
 //
 // tier   A full, B good, C partial, D audio first (spec section 6)
-// asr    NVIDIA speech plan in order of preference: [model, language code]
+// asr    NVIDIA speech plan in order of preference: [model, language code].
+//        Checked live on 27 Nov 2026: the hosted Parakeet function refuses bn-IN and ta-IN.
 // tts    'magpie' when NVIDIA text-to-speech covers it, otherwise the browser voice
 
 const p = (code) => ['parakeet', code];
@@ -10,8 +11,8 @@ const w = (code, approximate = false) => ['whisper', code, approximate];
 
 export const LANGUAGES = [
   { code: 'hi', name: 'Hindi', native: 'हिन्दी', bcp47: 'hi-IN', tier: 'A', asr: [p('hi-IN'), w('hi')], tts: 'magpie' },
-  { code: 'bn', name: 'Bengali', native: 'বাংলা', bcp47: 'bn-IN', tier: 'A', asr: [p('bn-IN'), w('bn')] },
-  { code: 'ta', name: 'Tamil', native: 'தமிழ்', bcp47: 'ta-IN', tier: 'A', asr: [p('ta-IN'), w('ta')] },
+  { code: 'bn', name: 'Bengali', native: 'বাংলা', bcp47: 'bn-IN', tier: 'A', asr: [w('bn')] },
+  { code: 'ta', name: 'Tamil', native: 'தமிழ்', bcp47: 'ta-IN', tier: 'A', asr: [w('ta')] },
   { code: 'en', name: 'English', native: 'English', bcp47: 'en-IN', tier: 'A', asr: [w('en')], tts: 'magpie' },
   { code: 'te', name: 'Telugu', native: 'తెలుగు', bcp47: 'te-IN', tier: 'B', asr: [w('te')] },
   { code: 'mr', name: 'Marathi', native: 'मराठी', bcp47: 'mr-IN', tier: 'B', asr: [w('mr')] },

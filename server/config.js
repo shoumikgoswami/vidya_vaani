@@ -34,8 +34,9 @@ export function loadConfig(env = process.env) {
       apiKey: str('NVIDIA_API_KEY'),
       llmBase: str('NVIDIA_LLM_BASE', 'https://integrate.api.nvidia.com/v1').replace(/\/+$/, ''),
       llmModels: [
-        str('NVIDIA_LLM_MODEL', 'google/gemma-3-12b-it'),
-        str('NVIDIA_LLM_FALLBACK', 'mistralai/mistral-large-4-1t-a52b'),
+        // Chosen by the live test in docs/model-eval.md.
+        str('NVIDIA_LLM_MODEL', 'nvidia/nemotron-3.5-bolt-e4b'),
+        str('NVIDIA_LLM_FALLBACK', 'minimaxai/minimax-m3.1-flash'),
       ],
       grpcHost: str('NVIDIA_GRPC_HOST', 'grpc.nvcf.nvidia.com:443'),
       parakeetFunctionId: str('NVIDIA_ASR_PARAKEET_FUNCTION_ID', '71203149-d3b7-4460-8231-1be2543a1fca'),

@@ -6,7 +6,7 @@ import { toAsrAudio } from './audio/ffmpeg.js';
 import { acquire, recordUsage, ProviderError } from './ratelimit.js';
 
 const MODELS = {
-  parakeet: { name: 'parakeet-1.1b-indic', functionId: () => config.nvidia.parakeetFunctionId },
+  parakeet: { name: 'parakeet-1.1b-multilingual', functionId: () => config.nvidia.parakeetFunctionId },
   whisper: { name: 'whisper-large-v3', functionId: () => config.nvidia.whisperFunctionId },
 };
 

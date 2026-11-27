@@ -52,7 +52,7 @@
 
   "login_phone_guide": "Type your mobile number.",
   "login_to_continue": "Sign in to continue.",
-  "login_clerk_guide": "Sign in with your mobile number or your Google account.",
+  "login_clerk_guide": "Sign in with your mobile number, your Google account or a username.",
   "phone_label": "Mobile number",
   "email_label": "Email",
   "send_code": "Send code",

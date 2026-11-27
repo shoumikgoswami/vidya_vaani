@@ -7,16 +7,20 @@ import grpc from '@grpc/grpc-js';
 import { startApp, uuid, DEMO } from './helpers/app.js';
 
 const asr = { calls: [], failWith: null, text: 'रवि, कल page 12 की कविता याद करनी है।' };
-const llm = { calls: [], nvidiaStatus: 200, junk: false };
+const llm = { calls: [], systems: [], nvidiaStatus: 200, junk: false };
 
 const answerFor = (body) => {
+  llm.systems.push(body.messages[0].content);
   const prompt = body.messages[0].content;
   const user = body.messages[1].content;
   if (llm.junk) return 'sorry, I cannot do that';
   if (prompt.includes('You translate short notes')) {
     const note = user.split('Note:\n')[1];
     const codes = [...user.split('Target languages: ')[1].split('\n')[0].matchAll(/(\w+) \(/g)].map((m) => m[1]);
-    return JSON.stringify(Object.fromEntries(codes.map((c) => [c, `[${c}] ${note}`])));
+    // Answers use each target's own script, so they pass the mixed-script guard.
+    const letters = { hi: 'क', mr: 'क', bn: 'ক', ta: 'க', te: 'క', or: 'କ' };
+    const inScript = (code) => note.replace(/\p{Script=Devanagari}+/gu, letters[code] ?? 'x');
+    return JSON.stringify(Object.fromEntries(codes.map((c) => [c, `[${c}] ${inScript(c)}`])));
   }
   return '```json\n' + JSON.stringify({
     clean: asr.text,
@@ -129,7 +133,7 @@ test('a Hindi note goes to Parakeet, is cleaned, tagged and translated in one ca
 
   let note = noteRow(id);
   assert.equal(note.stt_provider, 'nvidia');
-  assert.equal(note.stt_model, 'parakeet-1.1b-indic');
+  assert.equal(note.stt_model, 'parakeet-1.1b-multilingual');
   assert.equal(note.llm_model, 'primary-model');
   assert.equal(note.status, 'ready');
   assert.ok(JSON.parse(note.words).some((w) => w.w === '12' && w.uncertain));
@@ -148,7 +152,11 @@ test('a Hindi note goes to Parakeet, is cleaned, tagged and translated in one ca
   assert.equal(english.model, 'primary-model');
 });
 
-test('Telugu uses Whisper, and Odia stays as audio', async () => {
+test('Tamil and Telugu use Whisper, and Odia stays as audio', async () => {
+  await record({ lang_hint: 'ta' });
+  assert.equal(asr.calls.length, 1);
+  assert.equal(asr.calls[0].language_code, 'ta');
+  asr.calls.length = 0;
   await record({ lang_hint: 'te' });
   assert.equal(asr.calls[0].functionId, 'b702f636-f60c-4a3d-a6f4-f3568c13bd7d');
   assert.equal(asr.calls[0].language_code, 'te');
@@ -228,6 +236,15 @@ test('a respoken word replaces only that word', async () => {
   asr.text = original;
   assert.equal(res.status, 200);
   assert.match(res.data.transcript.raw, /page 21/);
+});
+
+test('placeholders are only mentioned when a note has names or numbers', async () => {
+  const { translate } = await import('../server/providers/translate.js');
+  llm.systems.length = 0;
+  await translate('कल कविता याद करनी है।', 'hi', ['en']);
+  assert.doesNotMatch(llm.systems.at(-1), /placeholder/);
+  await translate('कल page 12 याद करना है।', 'hi', ['en']);
+  assert.match(llm.systems.at(-1), /placeholder/);
 });
 
 test('the limiter holds calls back once the per-minute budget is spent', async () => {

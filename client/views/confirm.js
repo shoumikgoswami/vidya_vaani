@@ -207,7 +207,7 @@ export async function confirm(ctx) {
         w.uncertain ? h('button', { type: 'button', class: 'word', onclick: () => respeak(i) }, w.w) : w.w, ' ']))
       : h('p', { class: 'transcript', lang: note.lang }, text);
 
-    const numbers = [...text.matchAll(/(?:₹\s?)?\p{Nd}+(?:[.,:/]\p{Nd}+)*/gu)].map((m) => m[0]);
+    const numbers = note.numbers || [];
     const dates = note.tags.filter((x) => x.dueDate).map((x) => `${t(`tag_${x.type}`)}: ${formatDate(x.dueDate)}`);
     const names = note.recipients.length > 3 ? t('n_students', { n: note.recipients.length }) : note.recipients.map((r) => r.name).join(', ');
     const readback = [[t('for_whom'), names], numbers.length && [t('numbers'), numbers.join(', ')], dates.length && [t('dates'), dates.join(', ')]]

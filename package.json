@@ -10,7 +10,7 @@
   },
   "scripts": {
     "start": "node server/index.js",
-    "test": "node --test --test-concurrency=1 \"tests/*.test.js\"",
+    "test": "node --test --test-concurrency=1 --test-timeout=60000 --test-force-exit \"tests/*.test.js\"",
     "models:test": "node --env-file-if-exists=.env scripts/model-test.js",
     "i18n:fill": "node --env-file-if-exists=.env scripts/translate-ui.js"
   },

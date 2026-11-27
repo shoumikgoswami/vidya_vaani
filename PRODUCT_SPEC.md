@@ -16,11 +16,12 @@ These override the sections below where they differ.
 
 | Topic | v2.0 said | v2.1 builds |
 |---|---|---|
-| Sign-in (2.2) | Our own phone + OTP, SMS provider keys | **Clerk** (Google, email code, SMS OTP). Without Clerk keys and with `DEMO_MODE=true`, a demo phone login shows the code on screen |
+| Sign-in (2.2) | Our own phone + OTP, SMS provider keys | **Clerk**: SMS OTP, Google, or username and password (a username alone never links a parent automatically). Without Clerk keys and with `DEMO_MODE=true`, a demo phone login shows the code on screen |
 | Parent linking (J5) | Verified phone matches | Verified **phone or email** matches. The teacher can record the parent's Gmail |
 | LLM chain (5.4, 5.5) | NVIDIA model, NVIDIA fallback, rules | NVIDIA model, NVIDIA fallback, **free OpenRouter models**, rules |
-| LLM choice (5.4) | Llama 4 Maverick / Gemma 4 / Qwen / Mistral Large 3 | Those NVIDIA ids were no longer listed on 27 Nov. Defaults: `google/gemma-3-12b-it`, then `mistralai/mistral-large-4-1t-a52b`. Choose with `npm run models:test` |
+| LLM choice (5.4) | Llama 4 Maverick / Gemma 4 / Qwen / Mistral Large 3 | Those NVIDIA ids were no longer listed on 27 Nov. Chosen by live test (`docs/model-eval.md`): `nvidia/nemotron-3.5-bolt-e4b`, then `minimaxai/minimax-m3.1-flash` |
 | Runtime (11) | Node 20 | Node 22 |
+| Parakeet coverage (5.2, 6) | Hindi, Bengali, Tamil | Checked live on 27 Nov: the hosted function transcribes Hindi and English and refuses `bn-IN` and `ta-IN`. Bengali and Tamil go to Whisper |
 | Speech requests (5.2) | StreamingRecognize for large audio | Notes are capped at 2 minutes and sent as FLAC when the WAV exceeds 3.5 MB, so only `Recognize` is used |
 | Settings (12) | `SMS_PROVIDER`, `SMS_API_KEY` | Removed. Clerk sends the SMS. Added `CLERK_*` and `OPENROUTER_*` |
 
