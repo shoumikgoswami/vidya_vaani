@@ -1,0 +1,12 @@
+{
+  "name": "Vidya Vaani",
+  "short_name": "Vidya Vaani",
+  "description": "A voice-first school diary.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f3f6f4",
+  "theme_color": "#14663f",
+  "icons": [{ "src": "/img/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

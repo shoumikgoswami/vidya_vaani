@@ -1,0 +1,22 @@
+name: compose-smoke
+on: [push, pull_request]
+
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start with no .env file
+        run: docker compose up --build -d --wait
+      - name: Smoke check port 3000
+        run: bash tests/e2e-smoke.sh
+      - name: Tests inside the container
+        run: docker compose exec -T app npm test
+      - name: Logs
+        if: always()
+        run: docker compose logs --no-color

@@ -1,0 +1,45 @@
+{
+  "name": "vidya-vaani",
+  "version": "1.0.0",
+  "description": "A voice-first school diary. Scan, speak, done.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "node --test --test-concurrency=1 \"tests/*.test.js\"",
+    "models:test": "node --env-file-if-exists=.env scripts/model-test.js",
+    "i18n:fill": "node --env-file-if-exists=.env scripts/translate-ui.js"
+  },
+  "dependencies": {
+    "@clerk/backend": "^3.33.1",
+    "@fontsource/noto-nastaliq-urdu": "^5.3.0",
+    "@fontsource/noto-sans": "^5.3.0",
+    "@fontsource/noto-sans-arabic": "^5.3.0",
+    "@fontsource/noto-sans-bengali": "^5.3.0",
+    "@fontsource/noto-sans-devanagari": "^5.3.0",
+    "@fontsource/noto-sans-gujarati": "^5.3.0",
+    "@fontsource/noto-sans-gurmukhi": "^5.3.0",
+    "@fontsource/noto-sans-kannada": "^5.3.0",
+    "@fontsource/noto-sans-malayalam": "^5.3.0",
+    "@fontsource/noto-sans-meetei-mayek": "^5.3.0",
+    "@fontsource/noto-sans-ol-chiki": "^5.3.0",
+    "@fontsource/noto-sans-oriya": "^5.3.0",
+    "@fontsource/noto-sans-tamil": "^5.3.0",
+    "@fontsource/noto-sans-telugu": "^5.3.0",
+    "@grpc/grpc-js": "^1.14.7",
+    "@grpc/proto-loader": "^0.8.1",
+    "@phosphor-icons/core": "^2.1.1",
+    "better-sqlite3": "^13.2.0",
+    "express": "^5.3.0",
+    "helmet": "^8.3.0",
+    "jsqr": "^1.4.0",
+    "multer": "^2.5.0",
+    "qrcode": "^1.5.4",
+    "web-push": "^4.0.0",
+    "zod": "^3.25.76"
+  }
+}

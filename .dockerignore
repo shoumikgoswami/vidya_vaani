@@ -1,0 +1,9 @@
+node_modules
+.git
+.github
+.data
+.env
+.env.*
+tasks
+.claude
+*.log

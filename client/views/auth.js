@@ -1,0 +1,160 @@
+// S2 sign-in (Clerk, or the demo phone code) and the first-run wizard.
+import { h, add, icon, replace } from '../lib/dom.js';
+import { api, post } from '../lib/api.js';
+import { t, language } from '../lib/i18n.js';
+import { store, signedIn, navigate, homeFor, refreshMe, loadClerk } from '../lib/state.js';
+import { guide, button, form, field, languageSelect, skeletons, failure, notice, errorText } from '../lib/ui.js';
+
+const safeNext = (next) => (next && next.startsWith('/') && !next.startsWith('//') ? next : null);
+
+async function afterSignIn(next) {
+  await refreshMe();
+  store.config = await api('/config');
+  sessionStorage.removeItem('vv.next');
+  navigate(next || homeFor(), { replace: true });
+}
+
+function keypad(input, maxLength, onChange) {
+  const press = (key) => {
+    if (key === 'back') input.value = input.value.slice(0, -1);
+    else if (input.value.replace(/\D/g, '').length < maxLength) input.value += key;
+    onChange();
+  };
+  const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'back'];
+  return h('div', { class: 'keypad' }, keys.map((key) =>
+    key === '' ? h('span') : h('button', {
+      type: 'button', class: 'btn outline big', 'aria-label': key === 'back' ? t('delete_digit') : key, onclick: () => press(key),
+    }, key === 'back' ? icon('backspace', { flip: true }) : key)));
+}
+
+function numberEntry({ label, maxLength, submitLabel, onSubmit, value = '', code = false }) {
+  const input = h('input', {
+    class: 'code', inputmode: 'none', type: 'tel', autocomplete: code ? 'one-time-code' : 'tel', 'aria-label': label, value,
+  });
+  const submit = h('button', { type: 'submit', class: 'btn primary big block' }, icon('check'), h('span', {}, submitLabel));
+  const error = h('p', { class: 'error', role: 'alert', hidden: true });
+  const check = () => {
+    error.hidden = true;
+    submit.disabled = input.value.replace(/\D/g, '').length < (code ? 6 : 10);
+  };
+  input.addEventListener('input', check);
+  check();
+  const el = h('form', { class: 'stack', novalidate: true }, field(label, input), error, keypad(input, maxLength, check), submit);
+  el.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (submit.disabled) return;
+    submit.disabled = true;
+    try {
+      await onSubmit(input.value.trim());
+    } catch (e) {
+      error.textContent = errorText(e);
+      error.hidden = false;
+      submit.disabled = false;
+    }
+  });
+  setTimeout(() => input.focus(), 50);
+  return el;
+}
+
+function demoPhoneLogin(ctx, next) {
+  const box = h('div', { class: 'stack' });
+  const askCode = (phone, demoCode) => replace(box,
+    guide('chat-circle', 'otp_enter', { phone }),
+    notice('info', [h('span', {}, t('otp_demo_banner')), h('strong', { class: 'demo-code' }, demoCode)], 'warn'),
+    numberEntry({
+      label: t('otp_label'), maxLength: 6, code: true, submitLabel: t('verify'),
+      onSubmit: async (code) => {
+        await post('/auth/otp/verify', { phone, code });
+        await afterSignIn(next);
+      },
+    }),
+    button(t('change_number'), { iconName: 'arrow-left', kind: 'block', onClick: askPhone }));
+  const askPhone = () => replace(box,
+    guide('phone', 'login_phone_guide'),
+    numberEntry({
+      label: t('phone_label'), maxLength: 12, value: ctx.state.phone || '', submitLabel: t('send_code'),
+      onSubmit: async (phone) => {
+        const result = await post('/auth/otp/send', { phone });
+        askCode(result.phone, result.demoCode);
+      },
+    }));
+  askPhone();
+  return box;
+}
+
+async function clerkLogin(ctx, next) {
+  const mount = h('div', { class: 'stack', style: 'align-items:center' });
+  const status = h('div', {}, skeletons(2, true));
+  add(ctx.root, guide('shield-check', 'login_clerk_guide'), status, mount);
+  let exchanged = false;
+  try {
+    const clerk = await loadClerk();
+    if (!ctx.alive()) return;
+    status.textContent = '';
+    const exchange = async () => {
+      if (exchanged || !clerk.session) return;
+      exchanged = true;
+      replace(status, skeletons(1));
+      const token = await clerk.session.getToken();
+      await api('/auth/clerk', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: {} });
+      await afterSignIn(next);
+    };
+    const onError = (error) => {
+      exchanged = false;
+      replace(status, failure(error, () => exchange().catch(onError)));
+    };
+    if (clerk.session) return exchange().catch(onError);
+    const back = `${location.origin}/login${next ? `?next=${encodeURIComponent(next)}` : ''}`;
+    clerk.mountSignIn(mount, { forceRedirectUrl: back, signUpForceRedirectUrl: back, withSignUp: true });
+    const stop = clerk.addListener(() => exchange().catch(onError));
+    ctx.onLeave(() => {
+      stop?.();
+      clerk.unmountSignIn(mount);
+    });
+  } catch (error) {
+    replace(status, failure(error, () => navigate(location.pathname + location.search, { replace: true })));
+  }
+}
+
+export async function login(ctx) {
+  const next = safeNext(ctx.query.get('next')) || safeNext(sessionStorage.getItem('vv.next'));
+  if (next) sessionStorage.setItem('vv.next', next);
+  if (signedIn()) return afterSignIn(next);
+  add(ctx.root, h('h1', {}, t('sign_in')));
+  if (store.config.clerk) await clerkLogin(ctx, next);
+  else if (store.config.otpLogin) add(ctx.root, demoPhoneLogin(ctx, next));
+  else add(ctx.root, notice('warning', [h('p', {}, t('auth_not_configured'))], 'bad'));
+  if (store.config.demoMode) add(ctx.root, button(t('demo_try'), { iconName: 'house', kind: 'block', href: '/' }));
+}
+
+export function setup(ctx) {
+  if (!store.config.setupNeeded) return navigate(homeFor(), { replace: true });
+  add(ctx.root, h('h1', {}, t('setup_title')), guide('chalkboard-teacher', 'setup_help'));
+  if (store.config.clerk && !signedIn()) {
+    return add(ctx.root, notice('lock', [h('p', {}, t('setup_sign_in_first'))]),
+      button(t('sign_in'), { iconName: 'phone', kind: 'primary big block', href: '/login?next=/setup' }));
+  }
+  if (!store.config.clerk && !store.config.otpLogin) {
+    return add(ctx.root, notice('warning', [h('p', {}, t('auth_not_configured'))], 'bad'));
+  }
+  const mode = (value, title, help, checked) =>
+    h('label', { class: 'card check' }, h('input', { type: 'radio', name: 'qrMode', value, checked }),
+      h('span', {}, h('strong', {}, title), h('br'), h('span', { class: 'muted small' }, help)));
+  add(ctx.root, form(async (data) => {
+    const result = await post('/setup', data);
+    store.config = await api('/config');
+    if (result.signedIn) {
+      await refreshMe();
+      return navigate('/admin', { replace: true });
+    }
+    navigate('/login?next=/admin', { state: { phone: result.phone } });
+  },
+  field(t('school_name'), h('input', { name: 'schoolName', required: true, autocomplete: 'organization', lang: language() })),
+  field(t('your_name'), h('input', { name: 'adminName', required: true, autocomplete: 'name', value: store.me.user?.name || '' })),
+  !store.config.clerk && field(t('phone_label'), h('input', { name: 'phone', type: 'tel', inputmode: 'tel', required: true })),
+  field(t('default_language'), languageSelect('defaultLang', language())),
+  h('fieldset', { class: 'stack plain' }, h('legend', {}, h('strong', {}, t('qr_mode'))),
+    mode('per_student', t('qr_per_student'), t('qr_per_student_help'), true),
+    mode('per_school', t('qr_per_school'), t('qr_per_school_help'), false)),
+  button(t('setup_create'), { iconName: 'check', kind: 'primary big block', type: 'submit' })));
+}
