@@ -1,13 +1,14 @@
 // Offline shell, remembered diary pages and push notifications.
 // Pages and data are network first (always fresh when there is a network), vendor files cache first.
 
-const SHELL = 'vv-shell-v1';
+const SHELL = 'vv-shell-v2';
 const DATA = 'vv-data';
 const VENDOR = 'vv-vendor-v1';
 
 const SHELL_FILES = [
-  '/', '/css/app.css', '/app.js', '/app-language.js', '/img/icon.svg', '/manifest.webmanifest', '/vendor/fonts.css', '/i18n/en.json',
-  ...['api', 'capture', 'dom', 'i18n', 'languages', 'outbox', 'push', 'qr-scan', 'recorder', 'speak', 'state', 'translator-fallback', 'ui']
+  '/', '/css/app.css', '/app.js', '/app-language.js', '/manifest.webmanifest', '/vendor/fonts.css', '/i18n/en.json',
+  '/img/icon.svg', '/img/icon-192.png', '/img/badge-96.png',
+  ...['api', 'capture', 'dom', 'i18n', 'install', 'languages', 'outbox', 'push', 'qr-scan', 'recorder', 'speak', 'state', 'translator-fallback', 'ui']
     .map((n) => `/lib/${n}.js`),
   ...['account', 'admin', 'auth', 'confirm', 'consent', 'home', 'note', 'parent', 'record', 'reply', 'scan', 'teacher']
     .map((n) => `/views/${n}.js`),
@@ -72,7 +73,7 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('push', (event) => {
   const data = event.data?.json() || { title: 'Vidya Vaani', body: '' };
   event.waitUntil(self.registration.showNotification(data.title, {
-    body: data.body, tag: data.tag, icon: '/img/icon.svg', badge: '/img/icon.svg', data: { url: data.url || '/' },
+    body: data.body, tag: data.tag, icon: '/img/icon-192.png', badge: '/img/badge-96.png', data: { url: data.url || '/' },
   }));
 });
 

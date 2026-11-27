@@ -1,4 +1,4 @@
-// Web Push subscription and the "add to home screen" prompt.
+// Web Push subscription.
 import { post } from './api.js';
 
 export const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
@@ -18,20 +18,4 @@ export async function enablePush(publicKey) {
     || (await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: toBytes(publicKey) }));
   await post('/push/subscribe', subscription.toJSON());
   return 'granted';
-}
-
-let installEvent = null;
-window.addEventListener('beforeinstallprompt', (event) => {
-  event.preventDefault();
-  installEvent = event;
-});
-
-export const canInstall = () => Boolean(installEvent);
-
-export async function install() {
-  if (!installEvent) return false;
-  installEvent.prompt();
-  const choice = await installEvent.userChoice;
-  installEvent = null;
-  return choice.outcome === 'accepted';
 }

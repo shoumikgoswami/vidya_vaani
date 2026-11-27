@@ -7,7 +7,14 @@ import {
   button, avatar, languageSheet, nativeName, confirmSheet, toast, speakButton, showError, segmented,
 } from '../lib/ui.js';
 import { chooseLanguage } from '../app-language.js';
-import { consentPoints, consentText, appExtras } from './consent.js';
+import { consentPoints, consentText } from './consent.js';
+import { enablePush, pushState } from '../lib/push.js';
+import { install, installState } from '../lib/install.js';
+
+const row = (glyph, title, detail, onClick) =>
+  h('button', { type: 'button', class: 'item', onclick: onClick }, icon(glyph, { size: 28 }),
+    h('span', { class: 'grow' }, h('strong', {}, title), detail && h('span', { class: 'muted small' }, detail)),
+    icon('caret-right', { flip: true }));
 
 export function account(ctx) {
   const { user, children } = store.me;
@@ -20,16 +27,18 @@ export function account(ctx) {
         setRole(r);
         navigate(homeFor(r));
       })),
-    h('button', { type: 'button', class: 'item', onclick: () => languageSheet(t('app_language'), language(), chooseLanguage) },
-      icon('globe', { size: 30 }), h('span', { class: 'grow' }, h('strong', {}, t('app_language')), h('span', { class: 'muted' }, nativeName(language())))),
-    children.filter((c) => c.status === 'active').map((c) => h('button', {
-      type: 'button', class: 'item',
-      onclick: () => languageSheet(t('read_in'), c.readLang, (code) =>
-        patch(`/links/${c.linkId}`, { readLang: code }).then(refreshMe).then(() => navigate('/me', { replace: true })).catch(showError)),
-    }, icon('translate', { size: 30 }), h('span', { class: 'grow' }, h('strong', {}, t('notes_for_child', { child: c.name })),
-      h('span', { class: 'muted' }, nativeName(c.readLang || user.uiLang || 'en'))))),
-    appExtras(),
-    button(t('help_title'), { iconName: 'info', kind: 'outline block', href: '/help' }),
+    row('globe', t('app_language'), nativeName(language()), () => languageSheet(t('app_language'), language(), chooseLanguage)),
+    children.filter((c) => c.status === 'active').map((c) => row(
+      'translate', t('notes_for_child', { child: c.name }), nativeName(c.readLang || user.uiLang || 'en'),
+      () => languageSheet(t('read_in'), c.readLang, (code) =>
+        patch(`/links/${c.linkId}`, { readLang: code }).then(refreshMe).then(() => navigate('/me', { replace: true })).catch(showError)))),
+    pushState() === 'default' && row('bell', t('allow_notifications'), null, async () => {
+      const result = await enablePush(store.config.vapidPublicKey);
+      toast(t(result === 'granted' ? 'notifications_on' : 'notifications_off'));
+      navigate('/me', { replace: true });
+    }),
+    installState() !== 'installed' && row('download-simple', t('install_title'), t('install_body'), install),
+    row('info', t('help_title'), null, () => navigate('/help')),
     children.length > 0 && h('details', { class: 'card' },
       h('summary', {}, h('strong', {}, t('privacy_title'))),
       h('div', { class: 'row' }, h('p', { class: 'grow muted' }, t('privacy_intro')), speakButton(consentText(), languageOf('consent_stored'))),
@@ -46,7 +55,7 @@ export function account(ctx) {
         },
       })),
     button(t('sign_out'), {
-      iconName: 'sign-out', kind: 'block',
+      iconName: 'sign-out', kind: 'outline block',
       onClick: async () => {
         await logout();
         navigate('/', { replace: true });

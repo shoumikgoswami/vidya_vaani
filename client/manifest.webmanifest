@@ -1,12 +1,33 @@
 {
-  "name": "Vidya Vaani",
+  "id": "/",
+  "name": "Vidya Vaani: voice school diary",
   "short_name": "Vidya Vaani",
-  "description": "A voice-first school diary.",
+  "description": "A school diary you can hear. The teacher speaks a note and parents listen in their own language.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#f3f6f4",
   "theme_color": "#14663f",
-  "icons": [{ "src": "/img/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+  "lang": "en",
+  "dir": "auto",
+  "categories": ["education"],
+  "prefer_related_applications": false,
+  "launch_handler": { "client_mode": "navigate-existing" },
+  "icons": [
+    { "src": "/img/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/img/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/img/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/img/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Scan QR", "url": "/scan", "icons": [{ "src": "/img/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "My diary", "url": "/p", "icons": [{ "src": "/img/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
+  ],
+  "screenshots": [
+    { "src": "/img/screenshots/home.png", "sizes": "720x1480", "type": "image/png", "form_factor": "narrow", "label": "Scan a diary sticker or try the demo" },
+    { "src": "/img/screenshots/record.png", "sizes": "720x1480", "type": "image/png", "form_factor": "narrow", "label": "The teacher speaks a note" },
+    { "src": "/img/screenshots/diary.png", "sizes": "720x1480", "type": "image/png", "form_factor": "narrow", "label": "The parent listens and reads it" }
+  ]
 }

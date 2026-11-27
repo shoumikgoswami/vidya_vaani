@@ -167,5 +167,20 @@
   "err_offline": "నెట్‌వర్క్ లేదు.",
   "err_otp_wrong": "కోడ్ తప్పు. మళ్ళీ ప్రయత్నించండి.",
   "help_title": "మైక్, కెమెరా సహాయం",
-  "login_clerk_guide": "మొబైల్ నంబర్, Google ఖాతా లేదా యూజర్‌నేమ్‌తో లాగిన్ అవ్వండి."
+  "login_clerk_guide": "మొబైల్ నంబర్, Google ఖాతా లేదా యూజర్‌నేమ్‌తో లాగిన్ అవ్వండి.",
+  "one_child": "1 బిడ్డ",
+  "one_child_chosen": "1 బిడ్డ ఎంపిక",
+  "week_new_one": "1 కొత్త సందేశం",
+  "install_title": "యాప్ ఇన్‌స్టాల్ చేయండి",
+  "install_body": "ఫోన్ స్క్రీన్ నుండే తెరవండి.",
+  "install_button": "ఇన్‌స్టాల్",
+  "install_later": "ఇప్పుడు వద్దు",
+  "installed": "యాప్ ఇన్‌స్టాల్ అయింది.",
+  "install_ios_share": "షేర్ బటన్ నొక్కండి.",
+  "install_ios_add": "\"Add to Home Screen\" ఎంచుకోండి.",
+  "install_ios_confirm": "\"Add\" నొక్కండి.",
+  "install_menu_open": "బ్రౌజర్ మెనూ తెరవండి.",
+  "install_menu_choose": "\"Install app\" లేదా \"Add to Home screen\" ఎంచుకోండి.",
+  "install_menu_confirm": "\"Install\" నొక్కండి.",
+  "install_inapp": "WhatsApp లేదా వేరే యాప్ నుండి తెరిచారా? ముందు Chrome లో తెరవండి."
 }

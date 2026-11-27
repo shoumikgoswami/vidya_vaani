@@ -8,9 +8,12 @@ for i in $(seq 1 60); do
   sleep 1
 done
 
-curl -fsS "$BASE/healthz" | grep -q '"ok":true'
-curl -fsS "$BASE/" | grep -q "Vidya Vaani"
-curl -fsS "$BASE/api/config" | grep -q '"demoMode"'
+curl -fsS "$BASE/healthz" | grep '"ok":true' >/dev/null
+curl -fsS "$BASE/" | grep "Vidya Vaani" >/dev/null
+curl -fsS "$BASE/api/config" | grep '"demoMode"' >/dev/null
 curl -fsS "$BASE/app.js" >/dev/null
 curl -fsS "$BASE/vendor/jsqr.js" >/dev/null
+curl -fsS "$BASE/manifest.webmanifest" | grep '"standalone"' >/dev/null
+curl -fsS "$BASE/sw.js" >/dev/null
+curl -fsS -o /dev/null "$BASE/img/icon-512.png"
 echo "smoke check passed for $BASE"

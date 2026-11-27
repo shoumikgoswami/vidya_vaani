@@ -1,7 +1,7 @@
 // S7 class dashboard, S8 voice inbox, adding students (J2) and S15 sticker sheets.
 import { h, add, icon, replace } from '../lib/dom.js';
 import { api, post, patch, del } from '../lib/api.js';
-import { t, languageOf, formatDate } from '../lib/i18n.js';
+import { t, languageOf, formatDate, childCount } from '../lib/i18n.js';
 import { voiceCapture } from '../lib/capture.js';
 import * as outbox from '../lib/outbox.js';
 import { store, navigate, membershipFor, speakLanguage, adminSchoolId } from '../lib/state.js';
@@ -9,6 +9,7 @@ import {
   guide, button, sheet, confirmSheet, skeletons, failure, showError, toast, notice, empty, avatar, field, form, segmented,
   tagChip, player,
 } from '../lib/ui.js';
+import { installCard } from '../lib/install.js';
 import { voiceReply } from './reply.js';
 import { words, markListened } from './note.js';
 import { speak } from '../lib/speak.js';
@@ -34,7 +35,7 @@ const noteRow = (note) =>
     h('span', { class: 'grow' },
       h('strong', { dir: 'auto' }, note.text ? `${note.text.slice(0, 60)}${note.text.length > 60 ? '…' : ''}` : t('listen_only')),
       h('span', { class: 'muted small' }, [
-        note.recipients?.length > 2 ? t('n_students', { n: note.recipients.length }) : note.recipients?.join(', '),
+        note.recipients?.length > 2 ? childCount(note.recipients.length) : note.recipients?.join(', '),
         formatDate(note.createdAt),
         note.publishedAt ? note.heard && t('heard_by', { heard: note.heard.heard, total: note.heard.total }) : t('not_saved_yet'),
       ].filter(Boolean).join(' · '))),
@@ -64,13 +65,13 @@ export function teacherHome(ctx) {
   add(ctx.root, h('h2', {}, t('my_classes')));
   return load(ctx, `/classes?school=${teacher.schoolId}`, ({ classes }, box) => {
     const mine = classes.filter((c) => c.teaches);
-    if (!mine.length) return add(box, empty('chalkboard-teacher', 'no_classes'));
+    if (!mine.length) return add(box, empty('chalkboard-teacher', 'no_classes'), installCard({ onLeave: ctx.onLeave }));
     add(box, h('ul', { class: 'list' }, mine.map((c) => h('li', {}, h('a', { class: 'item', href: `/t/class/${c.id}` },
       h('span', { class: 'avatar' }, `${c.name}${c.section}`),
       h('span', { class: 'grow' }, h('strong', {}, `${t('class')} ${c.name}${c.section}`),
-        h('span', { class: 'muted small' }, `${t('n_students', { n: c.students })} · ${c.academicYear}`)),
-      c.pending > 0 && h('span', { class: 'chip warn' }, t('n_requests', { n: c.pending })),
-      icon('caret-right', { flip: true }))))));
+        h('span', { class: 'muted small' }, `${childCount(c.students)} · ${c.academicYear}`),
+        c.pending > 0 && h('span', { class: 'pill-warn' }, t('n_requests', { n: c.pending }))),
+      icon('caret-right', { flip: true }))))), installCard({ onLeave: ctx.onLeave }));
   });
 }
 
@@ -138,7 +139,7 @@ export function classView(ctx) {
       reload();
     };
     add(box,
-      h('div', {}, h('h1', {}, `${t('class')} ${name}`), h('p', { class: 'muted' }, `${t('n_students', { n: students.length })} · ${cls.academicYear}`)),
+      h('div', {}, h('h1', {}, `${t('class')} ${name}`), h('p', { class: 'muted' }, `${childCount(students.length)} · ${cls.academicYear}`)),
       cls.teaches && button(t('note_whole_class'), { iconName: 'microphone', kind: 'primary big block', href: `/t/record?class=${id}` }),
       h('div', { class: 'pair' },
         button(t('add_students'), { iconName: 'plus', kind: 'outline', href: `/t/class/${id}/add` }),

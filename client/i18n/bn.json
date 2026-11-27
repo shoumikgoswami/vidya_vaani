@@ -167,5 +167,20 @@
   "err_offline": "নেটওয়ার্ক নেই।",
   "err_otp_wrong": "ভুল কোড। আবার চেষ্টা করুন।",
   "help_title": "মাইক ও ক্যামেরা সহায়তা",
-  "login_clerk_guide": "মোবাইল নম্বর, Google অ্যাকাউন্ট বা ইউজারনেম দিয়ে সাইন ইন করুন।"
+  "login_clerk_guide": "মোবাইল নম্বর, Google অ্যাকাউন্ট বা ইউজারনেম দিয়ে সাইন ইন করুন।",
+  "one_child": "১ জন বাচ্চা",
+  "one_child_chosen": "১ জন বাচ্চা বাছা হয়েছে",
+  "week_new_one": "১টি নতুন বার্তা",
+  "install_title": "অ্যাপ ইনস্টল করুন",
+  "install_body": "ফোনের স্ক্রিন থেকে সরাসরি খুলুন।",
+  "install_button": "ইনস্টল",
+  "install_later": "এখন নয়",
+  "installed": "অ্যাপ ইনস্টল হয়েছে।",
+  "install_ios_share": "শেয়ার বোতাম টিপুন।",
+  "install_ios_add": "\"Add to Home Screen\" বাছুন।",
+  "install_ios_confirm": "\"Add\" টিপুন।",
+  "install_menu_open": "ব্রাউজারের মেনু খুলুন।",
+  "install_menu_choose": "\"Install app\" বা \"Add to Home screen\" বাছুন।",
+  "install_menu_confirm": "\"Install\" টিপুন।",
+  "install_inapp": "WhatsApp বা অন্য অ্যাপ থেকে খুলেছেন? আগে Chrome-এ খুলুন।"
 }

@@ -3,6 +3,7 @@ import { h, add, icon } from '../lib/dom.js';
 import { api, post } from '../lib/api.js';
 import { t, languageOf } from '../lib/i18n.js';
 import { store, signedIn, navigate, homeFor, refreshMe, setRole } from '../lib/state.js';
+import { installCard } from '../lib/install.js';
 import { guide, button, sheet, avatar, skeletons, showError, speakButton, toast } from '../lib/ui.js';
 
 const roleLabel = (p) => (p.role === 'parent' ? t('parent_of', { child: p.child.split(' ')[0] }) : t(`role_${p.role}`));
@@ -83,6 +84,7 @@ export async function home(ctx) {
     h('div', { class: 'actions' },
       button(t('scan_qr'), { iconName: 'qr-code', kind: 'primary big block', href: '/scan' }),
       button(t('sign_in'), { iconName: 'phone', kind: 'outline big block', href: '/login' })),
+    installCard({ onLeave: ctx.onLeave }),
     demoMode && h('section', { class: 'stack', 'aria-labelledby': 'demo-title' },
       h('div', { class: 'row' }, h('h2', { class: 'grow', id: 'demo-title' }, t('demo_try')), speakButton(t('demo_try_help'), languageOf('demo_try_help'))),
       h('p', { class: 'muted' }, t('demo_try_help')),

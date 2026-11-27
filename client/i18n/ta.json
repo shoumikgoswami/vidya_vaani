@@ -167,5 +167,20 @@
   "err_offline": "இணையம் இல்லை.",
   "err_otp_wrong": "தவறான குறியீடு. மீண்டும் முயற்சி செய்யுங்கள்.",
   "help_title": "மைக், கேமரா உதவி",
-  "login_clerk_guide": "கைபேசி எண், Google கணக்கு அல்லது பயனர்பெயர் கொண்டு உள்நுழையுங்கள்."
+  "login_clerk_guide": "கைபேசி எண், Google கணக்கு அல்லது பயனர்பெயர் கொண்டு உள்நுழையுங்கள்.",
+  "one_child": "1 குழந்தை",
+  "one_child_chosen": "1 குழந்தை தேர்வு",
+  "week_new_one": "1 புதிய செய்தி",
+  "install_title": "ஆப்பை நிறுவு",
+  "install_body": "போன் திரையிலிருந்தே திறக்கலாம்.",
+  "install_button": "நிறுவு",
+  "install_later": "இப்போது வேண்டாம்",
+  "installed": "ஆப் நிறுவப்பட்டது.",
+  "install_ios_share": "பகிர் பொத்தானைத் தட்டுங்கள்.",
+  "install_ios_add": "\"Add to Home Screen\" தேர்ந்தெடுங்கள்.",
+  "install_ios_confirm": "\"Add\" தட்டுங்கள்.",
+  "install_menu_open": "உலாவி பட்டியைத் திறங்கள்.",
+  "install_menu_choose": "\"Install app\" அல்லது \"Add to Home screen\" தேர்ந்தெடுங்கள்.",
+  "install_menu_confirm": "\"Install\" தட்டுங்கள்.",
+  "install_inapp": "WhatsApp அல்லது வேறு ஆப்பிலிருந்து திறந்தீர்களா? முதலில் Chrome-இல் திறங்கள்."
 }

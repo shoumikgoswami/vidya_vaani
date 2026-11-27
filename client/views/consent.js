@@ -5,7 +5,8 @@ import { t, language, languageOf } from '../lib/i18n.js';
 import { speak } from '../lib/speak.js';
 import { store, refreshMe } from '../lib/state.js';
 import { button, speakButton, toast } from '../lib/ui.js';
-import { enablePush, pushState, canInstall, install } from '../lib/push.js';
+import { enablePush, pushState } from '../lib/push.js';
+import { install, installState } from '../lib/install.js';
 
 export const CONSENT_POINTS = [
   ['database', 'consent_stored'],
@@ -30,12 +31,9 @@ export function appExtras() {
       },
     }));
   }
-  box.append(button(t('add_home_screen'), {
-    iconName: 'device-mobile', kind: 'outline big block',
-    onClick: async () => {
-      if (!canInstall() || !(await install())) toast(t('add_home_screen_help'));
-    },
-  }));
+  if (installState() !== 'installed') {
+    box.append(button(t('add_home_screen'), { iconName: 'device-mobile', kind: 'outline big block', onClick: install }));
+  }
   return box;
 }
 

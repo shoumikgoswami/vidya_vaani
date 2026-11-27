@@ -30,6 +30,18 @@ Demo mode is on by default: a sample school, one-tap role switching and "simulat
 
 Without an NVIDIA key, a note you record yourself keeps the browser's own live transcript where the browser has one (Chrome, Edge), and translation shows as unavailable. The sample notes carry stored transcripts and translations, so the cross-language flow always works. Sample audio is a computer voice unless real recordings are placed in `demo/sample-notes/`.
 
+## Install it on a phone
+
+Vidya Vaani is a Progressive Web App: it installs from the browser, opens full screen from the home screen, and keeps working on a weak network.
+
+- **Android (Chrome, Samsung Internet):** tap **Install** on the card in the app, or choose *Install app* in the browser menu.
+- **iPhone (Safari):** tap Share, then **Add to Home Screen**. The app shows these steps.
+- The offer also stays under **Me** for anyone who dismissed the card.
+
+Browsers only install apps, and only open the camera and microphone, on **HTTPS** or `localhost`. A phone opening `http://192.168.x.x:3000` can do neither. To try it on your own Android phone before deploying, connect it by USB, open `chrome://inspect/#devices` on the computer, add port forwarding `3000` to `localhost:3000`, and open `http://localhost:3000` on the phone.
+
+App icons are rendered from `client/img/*.svg` with `node scripts/make-icons.js`.
+
 ## Add keys
 
 Copy `.env.example` to `.env`, fill in what you have, then run `docker compose up --build` again. All keys stay on the server.

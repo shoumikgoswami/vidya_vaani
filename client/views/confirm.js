@@ -1,7 +1,7 @@
 // S6 the confirmation card: check the words, numbers and dates, then Save.
 import { h, add, icon, replace } from '../lib/dom.js';
 import { api, post, patch, del } from '../lib/api.js';
-import { t, language, languageOf, formatDate } from '../lib/i18n.js';
+import { t, language, languageOf, formatDate, childCount } from '../lib/i18n.js';
 import { speak, stopSpeaking, chime } from '../lib/speak.js';
 import { voiceCapture } from '../lib/capture.js';
 import { lang as languageInfo } from '../lib/languages.js';
@@ -209,7 +209,7 @@ export async function confirm(ctx) {
 
     const numbers = note.numbers || [];
     const dates = note.tags.filter((x) => x.dueDate).map((x) => `${t(`tag_${x.type}`)}: ${formatDate(x.dueDate)}`);
-    const names = note.recipients.length > 3 ? t('n_students', { n: note.recipients.length }) : note.recipients.map((r) => r.name).join(', ');
+    const names = note.recipients.length > 3 ? childCount(note.recipients.length) : note.recipients.map((r) => r.name).join(', ');
     const readback = [[t('for_whom'), names], numbers.length && [t('numbers'), numbers.join(', ')], dates.length && [t('dates'), dates.join(', ')]]
       .filter(Boolean);
     const readbackSpeech = readback.map(([k, v]) => `${k}: ${v}.`).join(' ');
@@ -246,8 +246,8 @@ export async function confirm(ctx) {
       add(actions,
         button(t('save'), { iconName: 'check', kind: 'primary big block', onClick: save }),
         h('div', { class: 'pair' },
-          button(t('rerecord'), { iconName: 'arrow-counter-clockwise', kind: 'outline', onClick: rerecord }),
-          button(t('later'), { iconName: 'clock', kind: 'outline', href: '/t' })));
+          button(t('rerecord'), { iconName: 'arrow-counter-clockwise', kind: 'outline small', onClick: rerecord }),
+          button(t('later'), { iconName: 'clock', kind: 'outline small', href: '/t' })));
     }
     if (note.publishedAt) replace(actions, button(t('done'), { kind: 'primary big block', href: '/t' }));
 

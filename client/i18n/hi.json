@@ -167,5 +167,20 @@
   "err_offline": "नेटवर्क नहीं है।",
   "err_otp_wrong": "कोड गलत है। फिर कोशिश करें।",
   "help_title": "माइक और कैमरा मदद",
-  "login_clerk_guide": "मोबाइल नंबर, Google खाते या यूज़रनेम से लॉग इन करें।"
+  "login_clerk_guide": "मोबाइल नंबर, Google खाते या यूज़रनेम से लॉग इन करें।",
+  "one_child": "1 बच्चा",
+  "one_child_chosen": "1 बच्चा चुना",
+  "week_new_one": "1 नया संदेश",
+  "install_title": "ऐप इंस्टॉल करें",
+  "install_body": "फ़ोन की स्क्रीन से सीधे खोलें।",
+  "install_button": "इंस्टॉल करें",
+  "install_later": "अभी नहीं",
+  "installed": "ऐप इंस्टॉल हो गया।",
+  "install_ios_share": "शेयर बटन दबाएँ।",
+  "install_ios_add": "\"Add to Home Screen\" चुनें।",
+  "install_ios_confirm": "\"Add\" दबाएँ।",
+  "install_menu_open": "ब्राउज़र का मेन्यू खोलें।",
+  "install_menu_choose": "\"Install app\" या \"Add to Home screen\" चुनें।",
+  "install_menu_confirm": "\"Install\" दबाएँ।",
+  "install_inapp": "WhatsApp या किसी और ऐप से खोला? पहले Chrome में खोलें।"
 }

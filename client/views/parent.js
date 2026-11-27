@@ -7,6 +7,7 @@ import { store, navigate, refreshMe } from '../lib/state.js';
 import {
   button, skeletons, failure, player, dueCard, empty, speakButton, TAG_ICONS, tagChip, notice,
 } from '../lib/ui.js';
+import { installCard } from '../lib/install.js';
 import { consentCard } from './consent.js';
 import { markListened } from './note.js';
 
@@ -39,7 +40,7 @@ function summaryCard(childId) {
     const spoken = [t('week_new', { n: s.newNotes }), t('week_unheard', { n: s.unheard }), ...(lines.length ? lines : [t('week_nothing_due')])].join('. ');
     replace(box,
       h('div', { class: 'row' }, h('h2', { class: 'grow' }, t('this_week')), speakButton(spoken, languageOf('this_week'))),
-      h('p', {}, `${t('week_new', { n: s.newNotes })} · ${t('week_unheard', { n: s.unheard })}`),
+      h('p', {}, `${s.newNotes === 1 ? t('week_new_one') : t('week_new', { n: s.newNotes })} · ${t('week_unheard', { n: s.unheard })}`),
       s.due.length
         ? h('ul', { class: 'list' }, s.due.map((d, i) => h('li', {}, h('a', { class: 'item', href: `/p/note/${d.noteId}?child=${childId}` },
           icon(TAG_ICONS[d.type], { size: 28 }), h('span', { class: 'grow' }, h('strong', {}, lines[i]))))))
@@ -93,7 +94,7 @@ export async function diary(ctx) {
   const week = summaryCard(child.studentId);
   const filterBar = h('div', { class: 'chips scroll', role: 'group', 'aria-label': t('filters') });
   const list = h('div', { class: 'stack' });
-  add(ctx.root, latest, week, filterBar, list);
+  add(ctx.root, latest, installCard({ onLeave: ctx.onLeave }), week, filterBar, list);
 
   let filter = '';
   let generation = 0;

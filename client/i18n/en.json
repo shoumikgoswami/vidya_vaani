@@ -27,7 +27,6 @@
   "read_in": "Read notes in",
   "read_in_other": "Read in another language",
   "offline_banner": "No network. You can still record.",
-
   "demo_try": "Try the demo",
   "demo_try_help": "Tap a person to use the app as them. No password needed.",
   "demo_title": "Demo mode",
@@ -42,14 +41,12 @@
   "ai_on": "NVIDIA key is set",
   "ai_off": "NVIDIA key not set",
   "ai_off_help": "Add NVIDIA_API_KEY to .env. Until then the phone's own tools are used.",
-
   "role_admin": "School admin",
   "role_teacher": "Teacher",
   "role_parent": "Parent",
   "parent_of": "Parent of {child}",
   "i_am_here_as": "I am using the app as",
   "you": "You",
-
   "login_phone_guide": "Type your mobile number.",
   "login_to_continue": "Sign in to continue.",
   "login_clerk_guide": "Sign in with your mobile number, your Google account or a username.",
@@ -63,7 +60,6 @@
   "change_number": "Change number",
   "delete_digit": "Delete last digit",
   "auth_not_configured": "Sign-in is not set up. Add the Clerk keys to .env.",
-
   "setup_title": "Set up your school",
   "setup_help": "Tell us the school's name. You become its owner.",
   "setup_start": "Start setup",
@@ -77,7 +73,6 @@
   "qr_per_student_help": "Scan the diary, then speak. Fastest for teachers.",
   "qr_per_school": "One QR for the whole school",
   "qr_per_school_help": "Print once. The teacher picks the child after scanning.",
-
   "welcome_title": "Welcome",
   "welcome_pick_language": "Choose your language.",
   "mother": "Mother",
@@ -91,7 +86,6 @@
   "admin_cannot_record": "Only this class's teachers can record a note.",
   "open_class": "Open class",
   "school_unlinked": "No child is connected to this number yet. Ask the teacher for your child's sticker.",
-
   "consent_title": "Before you listen to {child}'s notes",
   "consent_stored": "We keep your child's name, class, your phone number and the voice notes.",
   "consent_who": "Only you, approved family and your child's teachers can hear them.",
@@ -104,8 +98,6 @@
   "notifications_on": "Notifications are on.",
   "notifications_off": "Notifications are off. You can turn them on in browser settings.",
   "add_home_screen": "Add to home screen",
-  "add_home_screen_help": "Open your browser menu and tap Add to Home screen.",
-
   "scan_guide": "Point the camera at the QR sticker.",
   "camera_view": "Camera",
   "torch": "Torch",
@@ -118,7 +110,6 @@
   "camera_blocked": "The camera is blocked.",
   "camera_missing": "No camera could be opened.",
   "no_children": "No child is connected yet.",
-
   "class": "Class",
   "n_students": "{n} children",
   "n_selected": "{n} children chosen",
@@ -150,7 +141,6 @@
   "class_empty": "No children in this class yet.",
   "next_student": "Next child",
   "back_to_class": "Back to class",
-
   "confirm_title": "Check the note",
   "confirm_number": "{a} or {b}?",
   "clean_version": "Clean",
@@ -187,7 +177,6 @@
   "transcript_pending": "The words are not ready yet. Your voice is saved.",
   "browser_transcript": "Words written by this phone's browser.",
   "browser_transcript_key": "NVIDIA key not set. Words written by this phone's browser.",
-
   "tag_homework": "Homework",
   "tag_fee": "Fees",
   "tag_exam": "Exam",
@@ -199,7 +188,6 @@
   "yesterday": "Yesterday",
   "days_left": "{n} days left",
   "date_passed": "Date has passed",
-
   "translating": "Translating…",
   "translation_unavailable": "Translation not available yet.",
   "listen_only": "Listen to the voice note.",
@@ -219,7 +207,6 @@
   "parent_linked": "Parent connected",
   "remind": "Remind those who have not heard",
   "reminded": "Reminder sent for {n} children.",
-
   "diary_empty": "Scan the sticker on your child's diary.",
   "choose_child": "Choose child",
   "new_note": "New",
@@ -235,14 +222,12 @@
   "all_notes": "All",
   "pending": "Pending",
   "done_filter": "Past",
-
   "notes_for_child": "{child}'s notes",
   "privacy_title": "Privacy",
   "privacy_intro": "What is stored and who can hear it.",
   "delete_my_data": "Delete my data",
   "delete_my_data_confirm": "This removes your link to your child, your listening history and your replies. It cannot be undone.",
   "deleted": "Your data is deleted.",
-
   "tab_classes": "Classes",
   "tab_scan": "Scan",
   "tab_replies": "Replies",
@@ -250,7 +235,6 @@
   "tab_school": "School",
   "tab_people": "People",
   "reports": "Reports",
-
   "teacher_home_guide": "Scan a diary, or choose a class.",
   "my_classes": "My classes",
   "no_classes": "No class yet. Ask the school admin to add you.",
@@ -308,8 +292,7 @@
   "about_note": "About",
   "answer_by_voice": "Answer by voice",
   "answer_again": "Answer again",
-
-  "help_title": "Microphone and camera help",
+  "help_title": "Mic and camera help",
   "help_intro": "The app needs the microphone to record and the camera to scan.",
   "help_chrome": "Chrome on Android",
   "help_samsung": "Samsung Internet",
@@ -324,7 +307,6 @@
   "help_allow_mic": "Set Microphone to Allow.",
   "help_allow_camera": "Set Camera to Allow.",
   "help_reload": "Reload the page.",
-
   "school_settings": "School settings",
   "settings_saved": "Settings saved.",
   "address_optional": "Address (optional)",
@@ -399,13 +381,11 @@
   "action": "Action",
   "person": "Person",
   "nothing_yet": "Nothing yet.",
-
   "parent_new_note": "New message from {child}'s teacher.",
   "parent_due_tomorrow": "Tomorrow is the last date: {tag}.",
   "push_reply": "Reply from {child}'s parent.",
   "push_approval": "A parent is asking to connect to {child}.",
   "push_approved": "You can now hear {child}'s notes.",
-
   "err_generic": "Something went wrong. Please try again.",
   "err_offline": "No network.",
   "err_audio": "Could not play the recording.",
@@ -433,5 +413,20 @@
   "err_upload_too_large": "The recording is too long.",
   "err_nothing_heard": "I couldn't hear anything.",
   "err_nudged_recently": "A reminder was sent less than an hour ago.",
-  "err_already_set_up": "The school is already set up."
+  "err_already_set_up": "The school is already set up.",
+  "one_child": "1 child",
+  "one_child_chosen": "1 child chosen",
+  "week_new_one": "1 new note",
+  "install_title": "Install the app",
+  "install_body": "Open it from your phone screen.",
+  "install_button": "Install",
+  "install_later": "Not now",
+  "installed": "The app is installed.",
+  "install_ios_share": "Tap the Share button.",
+  "install_ios_add": "Choose Add to Home Screen.",
+  "install_ios_confirm": "Tap Add.",
+  "install_menu_open": "Open the browser menu.",
+  "install_menu_choose": "Choose Install app or Add to Home screen.",
+  "install_menu_confirm": "Tap Install.",
+  "install_inapp": "Opened this from WhatsApp or another app? Open it in Chrome first."
 }

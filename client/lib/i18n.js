@@ -48,6 +48,8 @@ export async function phrase(code, key, vars = {}) {
   return { text: text.replace(/\{(\w+)\}/g, (_m, name) => vars[name] ?? ''), lang: data[key] === undefined ? 'en' : code };
 }
 
+export const childCount = (n) => (Number(n) === 1 ? t('one_child') : t('n_students', { n }));
+
 export function formatDate(iso, options = { weekday: 'short', day: 'numeric', month: 'short' }) {
   if (!iso) return '';
   const date = iso.length === 10 ? new Date(`${iso}T12:00:00`) : new Date(iso.includes('T') ? iso : `${iso.replace(' ', 'T')}Z`);

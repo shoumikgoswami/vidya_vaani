@@ -60,7 +60,7 @@ function demoPhoneLogin(ctx, next) {
   const box = h('div', { class: 'stack' });
   const askCode = (phone, demoCode) => replace(box,
     guide('chat-circle', 'otp_enter', { phone }),
-    notice('info', [h('span', {}, t('otp_demo_banner')), h('strong', { class: 'demo-code' }, demoCode)], 'warn'),
+    notice('info', [h('p', {}, t('otp_demo_banner'), ' ', h('strong', { class: 'demo-code' }, demoCode))], 'warn'),
     numberEntry({
       label: t('otp_label'), maxLength: 6, code: true, submitLabel: t('verify'),
       onSubmit: async (code) => {
@@ -120,6 +120,7 @@ export async function login(ctx) {
   const next = safeNext(ctx.query.get('next')) || safeNext(sessionStorage.getItem('vv.next'));
   if (next) sessionStorage.setItem('vv.next', next);
   if (signedIn()) return afterSignIn(next);
+  ctx.root.classList.add('login');
   add(ctx.root, h('h1', {}, t('sign_in')));
   if (store.config.clerk) await clerkLogin(ctx, next);
   else if (store.config.otpLogin) add(ctx.root, demoPhoneLogin(ctx, next));

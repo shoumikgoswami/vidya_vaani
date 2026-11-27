@@ -1,7 +1,7 @@
 // S5 the record screen: scan, speak, done (J3, J4).
 import { h, add, icon, replace } from '../lib/dom.js';
 import { api } from '../lib/api.js';
-import { t, language, languageOf, phrase } from '../lib/i18n.js';
+import { t, language, languageOf, phrase, childCount } from '../lib/i18n.js';
 import { speak, stopSpeaking, chime } from '../lib/speak.js';
 import { startRecording, recordingSupported } from '../lib/recorder.js';
 import * as outbox from '../lib/outbox.js';
@@ -59,8 +59,8 @@ export async function record(ctx) {
   let silentTries = 0;
 
   const className = `${data.class.name}${data.class.section}`;
-  const header = h('div', { class: 'stage' });
-  const picker = h('div', { class: 'chips', hidden: true });
+  const header = h('div', { class: 'stage head' });
+  const picker = h('div', { class: 'chips pick', hidden: true });
   const stage = h('div', { class: 'stage' });
   const messages = h('div', { class: 'stack', 'aria-live': 'polite' });
 
@@ -68,11 +68,12 @@ export async function record(ctx) {
   const count = () => (mode === 'class' ? data.students.length : selected.size);
 
   function drawHeader() {
-    const name = mode === 'one' ? student.name : mode === 'class' ? t('whole_class') : t('n_selected', { n: selected.size });
+    const some = selected.size === 1 ? t('one_child_chosen') : t('n_selected', { n: selected.size });
+    const name = mode === 'one' ? student.name : mode === 'class' ? t('whole_class') : some;
     replace(header,
       mode === 'one' ? avatar(student.name, true) : h('span', { class: 'avatar large' }, icon('users-three', { size: 44 })),
       h('h1', {}, name),
-      h('p', { class: 'muted' }, mode === 'one' ? `${t('class')} ${className}` : `${t('class')} ${className} · ${t('n_students', { n: count() })}`));
+      h('p', { class: 'muted' }, mode === 'class' ? `${t('class')} ${className} · ${childCount(count())}` : `${t('class')} ${className}`));
     picker.hidden = mode !== 'some';
     if (mode === 'some') {
       replace(picker, data.students.map((s) =>

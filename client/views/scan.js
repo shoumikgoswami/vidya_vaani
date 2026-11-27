@@ -1,7 +1,7 @@
 // S4 scanner, the pick-from-list fallback, and what a scanned sticker leads to (J5, J9).
 import { h, add, icon, replace } from '../lib/dom.js';
 import { api, post, ApiError } from '../lib/api.js';
-import { t, language, languageOf } from '../lib/i18n.js';
+import { t, language, languageOf, childCount } from '../lib/i18n.js';
 import { speak, stopSpeaking } from '../lib/speak.js';
 import { startScanner } from '../lib/qr-scan.js';
 import { store, signedIn, navigate, setRole, currentRole, refreshMe, membershipFor } from '../lib/state.js';
@@ -42,7 +42,7 @@ export function pickFromList() {
         const mine = classes.filter((c) => c.teaches);
         replace(box, h('div', { class: 'grid' }, mine.map((c) =>
           h('button', { type: 'button', class: 'tile', onclick: () => showStudents(c).catch(showError) },
-            h('span', { class: 'name' }, `${c.name}${c.section}`), h('span', { class: 'muted small' }, t('n_students', { n: c.students }))))));
+            h('span', { class: 'name' }, `${c.name}${c.section}`), h('span', { class: 'muted small' }, childCount(c.students))))));
       }).catch(showError);
     } else {
       const children = store.me.children.filter((c) => c.status === 'active');

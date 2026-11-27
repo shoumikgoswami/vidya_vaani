@@ -1,7 +1,7 @@
 // S10 note detail: the teacher's voice first, then the words in the reader's own language.
 import { h, add, replace } from '../lib/dom.js';
 import { api, post, ApiError } from '../lib/api.js';
-import { t, language, formatDate } from '../lib/i18n.js';
+import { t, language, formatDate, childCount } from '../lib/i18n.js';
 import { store, speakLanguage, navigate } from '../lib/state.js';
 import {
   button, skeletons, failure, player, tagChip, dueCard, segmented, notice, speakButton, nativeName, toast, languageSheet, sheet,
@@ -139,7 +139,7 @@ export async function noteView(ctx) {
     if (!drawn) {
       drawn = true;
       replace(top,
-        h('div', {}, h('h1', {}, parent ? note.authorName || t('role_teacher') : t('note_for', { name: note.recipients.length > 2 ? t('n_students', { n: note.recipients.length }) : note.recipients.map((r) => r.name).join(', ') })),
+        h('div', {}, h('h1', {}, parent ? note.authorName || t('role_teacher') : t('note_for', { name: note.recipients.length > 2 ? childCount(note.recipients.length) : note.recipients.map((r) => r.name).join(', ') })),
           h('p', { class: 'muted' }, `${t('class')} ${note.className} · ${formatDate(note.publishedAt || note.createdAt)}`)),
         note.audioUrl && player(note.audioUrl, {
           durationMs: note.durationMs, hero: true, autoplay: parent || ctx.state.autoplay, onLeave: ctx.onLeave,

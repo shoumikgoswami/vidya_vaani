@@ -1,7 +1,7 @@
 // S11 settings and AI status, S12 teachers and classes, S13 promotion, S14 metrics.
 import { h, add, icon, replace } from '../lib/dom.js';
 import { api, post, patch } from '../lib/api.js';
-import { t, formatDate } from '../lib/i18n.js';
+import { t, formatDate, childCount } from '../lib/i18n.js';
 import { voiceCapture } from '../lib/capture.js';
 import { LANGUAGES, lang as languageInfo } from '../lib/languages.js';
 import { navigate, adminSchoolId, refreshMe, speakLanguage } from '../lib/state.js';
@@ -38,20 +38,19 @@ const SPEECH_LABEL = {
 function providerPanel() {
   const box = h('div', { class: 'card' }, h('h2', {}, t('ai_status')), skeletons(1));
   api('/school/providers').then((status) => {
-    const cell = (glyph, text) => h('span', { class: 'row' }, icon(glyph, { size: 20 }), h('span', {}, text));
+    const detail = (label, value) => h('span', { class: 'muted small' }, `${label}: ${value}`);
     replace(box,
       h('h2', {}, t('ai_status')),
       notice(status.nvidia ? 'check-circle' : 'info', [h('p', {}, t(status.nvidia ? 'ai_on' : 'ai_off')),
-        status.llmModels.length ? h('p', { class: 'small' }, status.llmModels.join(', ')) : h('p', { class: 'small' }, t('ai_off_help'))],
+        status.llmModels.length ? h('p', { class: 'small models' }, status.llmModels.join(', ')) : h('p', { class: 'small' }, t('ai_off_help'))],
       status.nvidia ? '' : 'warn'),
-      h('div', { class: 'table-wrap' }, h('table', {},
-        h('thead', {}, h('tr', {}, [t('language'), t('tier'), t('status_speech'), t('status_translation'), t('status_voice')].map((x) => h('th', {}, x)))),
-        h('tbody', {}, status.languages.map((l) => h('tr', {},
-          h('td', {}, l.name, h('br'), h('span', { class: 'muted small', lang: l.code }, l.native)),
-          h('td', {}, l.tier),
-          h('td', {}, cell(...[SPEECH_LABEL[l.speech][0], t(SPEECH_LABEL[l.speech][1])])),
-          h('td', {}, l.translation === 'browser' ? t('status_key_missing') : `${l.translation}${l.machineWarning ? ` (${t('may_be_wrong')})` : ''}`),
-          h('td', {}, l.tts === 'magpie' ? 'NVIDIA' : t('status_phone_voice'))))))));
+      h('ul', { class: 'lang-status' }, status.languages.map((l) => h('li', {},
+        h('span', { class: 'tier', title: t('tier') }, l.tier),
+        h('span', { class: 'grow' },
+          h('strong', {}, l.name, ' ', h('span', { class: 'muted', lang: l.code }, l.native)),
+          h('span', { class: 'row' }, icon(SPEECH_LABEL[l.speech][0], { size: 18 }), detail(t('status_speech'), t(SPEECH_LABEL[l.speech][1]))),
+          detail(t('status_translation'), l.translation === 'browser' ? t('status_key_missing') : `${l.translation}${l.machineWarning ? ` (${t('may_be_wrong')})` : ''}`),
+          detail(t('status_voice'), l.tts === 'magpie' ? 'NVIDIA' : t('status_phone_voice')))))));
   }).catch((error) => replace(box, failure(error)));
   return box;
 }
@@ -194,7 +193,7 @@ export function people(ctx) {
           ? data.classes.map((c) => h('div', { class: 'card' },
             h('div', { class: 'row' }, h('span', { class: 'avatar' }, `${c.name}${c.section}`),
               h('div', { class: 'grow' }, h('strong', {}, `${t('class')} ${c.name}${c.section} · ${c.academicYear}`), h('br'),
-                h('span', { class: 'muted small' }, [t('n_students', { n: c.students }),
+                h('span', { class: 'muted small' }, [childCount(c.students),
                   c.teachers.find((x) => x.membershipId === c.classTeacherId)?.name].filter(Boolean).join(' · ')))),
             h('div', { class: 'pair' },
               button(t('open_class'), { kind: 'outline small', href: `/t/class/${c.id}` }),

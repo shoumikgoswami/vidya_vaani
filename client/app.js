@@ -7,6 +7,7 @@ import { stopSpeaking } from './lib/speak.js';
 import * as outbox from './lib/outbox.js';
 import { skeletons, failure, languageSheet, nativeName, toast } from './lib/ui.js';
 import { chooseLanguage } from './app-language.js';
+import './lib/install.js';
 import { home, help, demoSheet } from './views/home.js';
 import { login, setup } from './views/auth.js';
 import { scan, sticker, schoolSticker } from './views/scan.js';
@@ -29,7 +30,7 @@ const ROUTES = [
   ['/k/:token', schoolSticker],
   ['/me', account, { auth: true, title: 'me' }],
   ['/t', teacherHome, { auth: true, role: 'teacher' }],
-  ['/t/record', record, { auth: true, title: 'record_note' }],
+  ['/t/record', record, { auth: true }],
   ['/t/confirm/:id', confirm, { auth: true }],
   ['/t/class/:id', classView, { auth: true }],
   ['/t/class/:id/add', addStudents, { auth: true }],
