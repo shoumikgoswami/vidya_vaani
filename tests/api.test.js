@@ -260,28 +260,68 @@ test('school settings and teachers belong to the admin', async () => {
   await admin.patch(`/api/school?school=${ids.school}`, { qrMode: 'per_student' });
 });
 
-test('promotion moves 5A to 6A and old notes stay visible to parents', async () => {
+test('each student moves on their own, and old notes stay visible to parents', async () => {
   const before = (await sunita.get(`/api/children/${ids.ravi}/notes`)).data.notes.length;
-  const anjali = (await app.db.get(`SELECT id FROM student WHERE name = 'Anjali Nair'`)).id;
-  const result = await admin.post(`/api/classes/${ids.class5}/promote`, {
-    name: '6', section: 'A', year: '2030-31', decisions: { [anjali]: 'hold' },
-  });
+  const named = async (name) => (await app.db.get('SELECT id FROM student WHERE name = ?', name)).id;
+  const [anjali, rohan, deepak, fatima] = await Promise.all(['Anjali Nair', 'Rohan Das', 'Deepak Yadav', 'Fatima Sheikh'].map(named));
+  const move = (moves, year = '2030-31') => admin.post(`/api/classes/${ids.class5}/move`, { year, moves });
+  const result = await move([
+    { studentId: ids.ravi, to: { name: '6', section: 'a' } },
+    { studentId: anjali, to: { name: '5', section: 'A' } },
+    { studentId: rohan, to: { name: '6', section: 'B' } },
+    { studentId: deepak, to: 'left' },
+  ]);
   assert.equal(result.status, 200, JSON.stringify(result.data));
-  assert.equal(result.data.counts.hold, 1);
-  const me = (await sunita.get('/api/me')).data;
-  assert.equal(me.children[0].className, '6A');
+  assert.deepEqual(result.data.counts, { moved: 3, left: 1 });
+
+  const where = async (id) => app.db.get(
+    `SELECT c.name || c.section AS label, c.academic_year AS year, s.active FROM student s JOIN class c ON c.id = s.class_id WHERE s.id = ?`, id,
+  );
+  assert.deepEqual(await where(rohan), { label: '6B', year: '2030-31', active: 1 });
+  assert.deepEqual(await where(anjali), { label: '5A', year: '2030-31', active: 1 }, 'a repeating student joins the new 5A');
+  assert.equal((await where(deepak)).active, 0);
+  assert.notEqual((await where(fatima)).year, '2030-31', 'a student who was not listed stays');
+  // The new 5A starts with the teachers the old one had.
+  assert.ok((await app.db.get(
+    `SELECT COUNT(*) AS n FROM class_teacher ct JOIN class c ON c.id = ct.class_id WHERE c.name = '5' AND c.academic_year = '2030-31'`,
+  )).n >= 2);
+
+  assert.equal((await move([{ studentId: rohan, to: 'left' }])).status, 400, 'no longer in this class');
+  assert.equal((await move([{ studentId: fatima, to: 'left' }], '2001-02')).data.error, 'year_must_be_later');
+  const same = (await app.db.get('SELECT academic_year FROM class WHERE id = ?', ids.class5)).academic_year;
+  assert.deepEqual((await move([{ studentId: fatima, to: { name: '5', section: 'B' } }], same)).data.counts, { moved: 1, left: 0 });
+
+  assert.equal((await sunita.get('/api/me')).data.children[0].className, '6A');
   const after = (await sunita.get(`/api/children/${ids.ravi}/notes`)).data.notes;
   assert.equal(after.length, before);
   assert.equal(after[0].className, '5A');
+});
+
+test('teachers can be added to a class and removed from it', async () => {
+  const detail = async () => (await admin.get(`/api/classes?school=${ids.school}`)).data.classes.find((c) => c.id === ids.class7);
+  const farida = (await admin.get(`/api/teachers?school=${ids.school}`)).data.teachers.find((x) => x.name === 'Meena Kumari');
+  const start = await detail();
+  const save = (teachers, classTeacherId) => admin.patch(`/api/classes/${ids.class7}`, {
+    teachers: teachers.map((membershipId) => ({ membershipId })), classTeacherId,
+  });
+  assert.equal((await save([...start.teachers.map((x) => x.membershipId), farida.id], start.classTeacherId)).status, 200);
+  assert.equal((await meena.get(`/api/classes/${ids.class7}`)).status, 200);
+  assert.equal((await save([farida.id], null)).status, 200);
+  assert.deepEqual((await detail()).teachers.map((x) => x.membershipId), [farida.id]);
+  assert.equal((await detail()).classTeacherId, null);
+  assert.equal((await save(start.teachers.map((x) => x.membershipId), start.classTeacherId)).status, 200);
+  assert.equal((await meena.get(`/api/classes/${ids.class7}`)).status, 403);
 });
 
 test('metrics and the activity log answer the admin', async () => {
   const metrics = (await admin.get(`/api/metrics?school=${ids.school}`)).data;
   assert.ok(metrics.notes >= 5);
   assert.equal(metrics.heardIn24h.target, 70);
-  assert.equal((await admin.post('/api/metrics/outcomes', { school: ids.school, period: 'Nov', homeworkDonePct: 81 })).status, 201);
+  // The app reports only what it measures itself.
+  assert.ok(!('outcomes' in metrics));
+  assert.equal((await admin.post('/api/metrics/outcomes', { school: ids.school, period: 'Nov', homeworkDonePct: 81 })).status, 404);
   const log = (await admin.get(`/api/audit?school=${ids.school}`)).data.entries;
-  assert.ok(log.some((e) => e.action === 'class.promote'));
+  assert.ok(log.some((e) => e.action === 'class.move'));
   assert.equal((await sunita.get(`/api/metrics?school=${ids.school}`)).status, 403);
 });
 

@@ -4,18 +4,17 @@ import { h, add, icon, replace } from '../lib/dom.js';
 import { t, language, languageOf } from '../lib/i18n.js';
 import { store } from '../lib/state.js';
 import { button, player, segmented, languageSheet, nativeName, sheet, avatar } from '../lib/ui.js';
-import { deviceCanSpeak } from '../lib/speak.js';
 import { LANGUAGES } from '../lib/languages.js';
 import { chooseLanguage } from '../app-language.js';
 import { consentPoints } from './consent.js';
 
 const SOURCE = 'https://github.com/shoumikgoswami/vidya_vaani';
 
-// One real note from the sample school: the teacher's recording and its stored translations.
+// One real note from the sample school: the teacher's recording and its stored translation. Only
+// languages with a real recording are offered, so each button plays what it names.
 const SAMPLE = {
   hi: { text: 'आज रवि ने class में बहुत अच्छा किया। कल Hindi की किताब के page 12 की कविता याद करनी है।', caption: 'lp_note_original' },
   en: { text: 'Ravi did very well in class today. He has to learn the poem on page 12 of the Hindi book by tomorrow.', caption: 'lp_note_spoken' },
-  ta: { text: 'இன்று ரவி class-இல் மிகவும் நன்றாக செய்தான். நாளைக்குள் Hindi புத்தகத்தின் page 12 கவிதையை மனப்பாடம் செய்ய வேண்டும்.', caption: 'lp_note_phone' },
 };
 
 const demoButton = (kind) => store.config.demoMode && button(t('demo_try'), { iconName: 'play', kind, href: '/demo' });
@@ -40,13 +39,10 @@ function sampleNote(ctx) {
     current?.stop();
     const { text, caption } = SAMPLE[code];
     current = player('/media/note-hi.mp3', {
-      hero: true, autoplay, durationMs: 6602, onLeave: ctx.onLeave,
-      speech: code === 'hi' ? undefined : { url: code === 'en' ? '/media/note-en.mp3' : null, text, lang: code },
+      hero: true, autoplay, durationMs: 5859, onLeave: ctx.onLeave,
+      speech: code === 'hi' ? undefined : { url: '/media/note-en.mp3', text, lang: code },
     });
-    const silent = code === 'ta' && !deviceCanSpeak('ta');
-    replace(stage, current,
-      h('p', { class: 'note-text', lang: code }, text),
-      h('p', { class: 'lp-caption' }, silent ? t('voice_missing', { language: nativeName('ta') }) : t(caption)));
+    replace(stage, current, h('p', { class: 'note-text', lang: code }, text), h('p', { class: 'lp-caption' }, t(caption)));
   }
   show('hi', false);
   return h('div', { class: 'lp-stage' }, h('figure', { class: 'lp-note' },

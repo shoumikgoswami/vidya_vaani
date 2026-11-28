@@ -11,6 +11,7 @@ import {
 import { chooseLanguage } from '../app-language.js';
 import { simulateScan } from './home.js';
 import { consentCard } from './consent.js';
+import { PARENT_PATH } from './register.js';
 
 const nameRow = (name, detail, onPick) =>
   h('div', { class: 'row' },
@@ -119,13 +120,17 @@ function qrError(ctx, error) {
 
 /** A new parent: welcome read aloud, language tiles, then sign-in (J5). */
 function welcome(ctx, path, schoolName) {
+  // Someone who came through "I am a parent" has chosen a language already.
+  const chosen = sessionStorage.getItem(PARENT_PATH) === '1';
+  const key = chosen ? 'parent_signin_guide' : 'welcome_pick_language';
   add(ctx.root,
     h('div', { class: 'page-head' }, h('h1', {}, t('welcome_title')), schoolName && h('p', { class: 'muted' }, schoolName)),
-    guide('translate', 'welcome_pick_language'),
-    languageTiles(language(), (code) => chooseLanguage(code)),
+    guide(chosen ? 'phone' : 'translate', key),
+    !chosen && languageTiles(language(), (code) => chooseLanguage(code)),
     h('div', { class: 'sticky-actions' },
-      button(t('continue'), { iconName: 'arrow-right', kind: 'primary big block', onClick: () => navigate(`/login?next=${encodeURIComponent(path)}`) })));
-  speak(t('welcome_pick_language'), languageOf('welcome_pick_language'));
+      button(t('continue'), { iconName: 'arrow-right', kind: 'primary big block', onClick: () => navigate(`/login?next=${encodeURIComponent(path)}`) }),
+      chosen && button(t('parent_change_language'), { iconName: 'globe', kind: 'quiet block', href: '/register/parent' })));
+  speak(t(key), languageOf(key));
 }
 
 function askToLink(ctx, token, student) {

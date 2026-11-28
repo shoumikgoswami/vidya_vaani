@@ -10,7 +10,7 @@ import { chooseLanguage, followAccountLanguage } from './app-language.js';
 import { standalone } from './lib/install.js';
 import { home, demo, help, demoSheet } from './views/home.js';
 import { landing } from './views/landing.js';
-import { registerSchool } from './views/register.js';
+import { registerChoice, registerParent, registerTeacher, registerSchool } from './views/register.js';
 import { ownerRequests } from './views/owner.js';
 import { login, schoolLogin, setup } from './views/auth.js';
 import { scan, sticker, schoolSticker } from './views/scan.js';
@@ -21,14 +21,17 @@ import { classStickers, allStickers, schoolQr } from './views/stickers.js';
 import { noteView } from './views/note.js';
 import { diary } from './views/parent.js';
 import { account } from './views/account.js';
-import { school, people, promote, reports } from './views/admin.js';
+import { school, people, move, reports } from './views/admin.js';
 import { configuration } from './views/config.js';
 
 // [pattern, view, options]
 const ROUTES = [
   ['/', home],
   ['/demo', demo, { title: 'demo_try' }],
-  ['/register', registerSchool, { title: 'register_title' }],
+  ['/register', registerChoice, { title: 'register_title' }],
+  ['/register/parent', registerParent, { title: 'register_title' }],
+  ['/register/teacher', registerTeacher, { title: 'register_title' }],
+  ['/register/school', registerSchool, { title: 'register_title' }],
   ['/owner', ownerRequests, { auth: true, title: 'school_requests' }],
   ['/login', login],
   ['/school/login', schoolLogin],
@@ -51,7 +54,7 @@ const ROUTES = [
   ['/p/note/:id', noteView, { auth: true, role: 'parent' }],
   ['/admin', school, { auth: true, role: 'admin', wide: true }],
   ['/admin/people', people, { auth: true, role: 'admin', wide: true }],
-  ['/admin/promote/:id', promote, { auth: true, role: 'admin' }],
+  ['/admin/move/:id', move, { auth: true, role: 'admin' }],
   ['/admin/reports', reports, { auth: true, role: 'admin', wide: true }],
   ['/admin/school-qr', schoolQr, { auth: true, role: 'admin' }],
   ['/admin/stickers', allStickers, { auth: true, role: 'admin', wide: true }],

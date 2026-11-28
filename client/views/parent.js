@@ -64,6 +64,8 @@ export async function diary(ctx) {
   if (!child) {
     add(ctx.root,
       empty('qr-code', 'diary_empty', button(t('scan_qr'), { iconName: 'qr-code', kind: 'primary big block', href: '/scan' })),
+      // A new teacher's account also lands here.
+      !store.me.memberships.length && button(t('teacher_have_code'), { iconName: 'chalkboard-teacher', kind: 'outline block', href: '/register/teacher' }),
       // Office staff who came through this door are shown the other one.
       store.me.memberships.some((m) => m.role === 'admin') && notice('chalkboard-teacher', [
         h('p', {}, t('family_only_notice')), button(t('school_signin'), { kind: 'primary small', href: '/school/login' }),

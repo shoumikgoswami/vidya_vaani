@@ -46,6 +46,11 @@ These override v2.1 and the sections below where they differ.
 | Home (S1) | An app screen with scan, sign-in and demo people | A **landing page** with a playable note; the demo moved to `/demo`; the installed app keeps the simple screen |
 | New schools (J1, S4) | First-run wizard on any install | On a public site, schools send a **request** and the site owner approves it. The wizard stays for a local install with no owner set. Several schools can share one site |
 | Sample office (13, 15) | Could attach contact details to existing accounts | It can no longer find, show, change or sign in as anyone who really signs in |
+| Registration (J1, J5) | Sign-in only; teachers added by phone | `/register` asks parent, teacher or school. Parents pick a language, then scan. Teachers join with a **one-time code** from the office |
+| Year end (S13) | Promote a whole class | **Each student moves** to any class and section, or leaves. A single student can move at any time |
+| Class teachers (S12) | Inside Edit class | Listed on each class card, added and removed there |
+| Reports (14) | Office types homework-done and fees-missed figures | Removed. Only what the app measures itself |
+| Landing sample (S1) | Hindi, English, Tamil | Hindi and English, the languages with real recordings |
 
 ---
 

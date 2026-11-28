@@ -40,14 +40,19 @@ Without an NVIDIA key, a note you record yourself keeps the browser's own live t
 | `/demo` | The sample school |
 | `/login` | Teachers and parents: classes and recording, or the child's diary |
 | `/school/login` | School office (principal, clerk): settings, teachers and classes, reports |
-| `/register` | A new school sends a request |
+| `/register` | Choose who you are: `/register/parent` (language, then scan), `/register/teacher` (school code), `/register/school` (a request) |
 | `/owner` | The site owner approves or declines requests |
 
 The office sign-in admits only accounts the school lists as office staff, or a newcomer on a fresh install who is about to create the school. The server applies office rights only to sessions that came through it: someone who is both a principal and a teacher signs in at the office for school work and at the other door to record notes.
 
 ### New schools
 
-On your own computer with no owner set, the first person to run the setup wizard creates the school. On a public site that would let a stranger claim it, so set `OWNER_EMAILS` to your sign-in email (it needs Clerk). The wizard is then switched off, and always is on Netlify: schools send a request at `/register`, and you approve it at `/owner`. Approval creates the school and gives its office to the email in the request, or to the mobile number when there is no email. No message is sent, so tell the school yourself. Each school sees only its own data.
+On your own computer with no owner set, the first person to run the setup wizard creates the school. On a public site that would let a stranger claim it, so set `OWNER_EMAILS` to your sign-in email (it needs Clerk). The wizard is then switched off, and always is on Netlify: schools send a request at `/register/school`, and you approve it at `/owner`. Approval creates the school and gives its office to the email in the request, or to the mobile number when there is no email. No message is sent, so tell the school yourself. Each school sees only its own data.
+
+### New teachers and parents
+
+- **Teachers:** the office adds a teacher by name (mobile and email are optional) and gets a one-time code, valid 14 days. The teacher signs in at `/register/teacher` and types it. A teacher added by mobile or email is also recognised on signing in.
+- **Parents:** choose a language first, then scan the diary sticker. The parent screens are worded in all 23 languages as machine drafts that a speaker should check. The sign-in box stays in English.
 
 ## Install it on a phone
 
@@ -111,7 +116,7 @@ Every code carries the Vidya Vaani logo and colours, and a test reads each style
 - **Teachers:** scan a sticker, speak, check the card (words, uncertain words, tags, dates, numbers), save by tapping or saying "save". Whole-class and selected-student notes, listen receipts, reminders, a voice inbox.
 - **Parents:** hear and read each note in their preferred language (with the teacher's own recording one tap away), see due dates, reply by voice, filter the diary, hear a weekly summary, get notifications and a reminder at 6 pm the day before a deadline.
 - **Voices:** a teacher picks one of six NVIDIA voices under **Me** for notes spoken in translation (Hindi and English). English words in a Hindi note are written in Devanagari before they are spoken, so "Science" is not spelled out letter by letter.
-- **Admins:** a Configuration screen with every technical detail (nothing about keys or models shows anywhere else), school settings, teachers and classes, per-student or per-school QR, branded sticker sheets, year-end promotion, metrics, activity log, AI status by language.
+- **Admins:** a Configuration screen with every technical detail (nothing about keys or models shows anywhere else), school settings, teachers and classes, per-student or per-school QR, branded sticker sheets, moving students one by one into new classes, adding and removing class teachers, metrics, activity log, AI status by language.
 
 ## Language coverage, stated plainly
 

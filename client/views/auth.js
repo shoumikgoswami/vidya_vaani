@@ -195,7 +195,8 @@ async function signInPage(ctx, portal) {
     h('div', { class: 'signin-links' },
       office && (store.config.setupNeeded
         ? button(t('setup_title'), { iconName: 'plus', kind: 'outline block', href: '/setup' })
-        : button(t('register_cta'), { iconName: 'plus', kind: 'outline block', href: '/register' })),
+        : button(t('register_school_cta'), { iconName: 'plus', kind: 'outline block', href: '/register/school' })),
+      !office && button(t('teacher_have_code'), { iconName: 'lock', kind: 'quiet block', href: '/register/teacher' }),
       button(t(office ? 'family_login_link' : 'school_login_link'), {
         iconName: office ? 'users' : 'chalkboard-teacher', kind: 'quiet block', href: office ? '/login' : '/school/login',
       }),

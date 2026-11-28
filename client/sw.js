@@ -1,7 +1,7 @@
 // Offline shell, remembered diary pages and push notifications.
 // Pages and data are network first (always fresh when there is a network), vendor files cache first.
 
-const SHELL = 'vv-shell-v6';
+const SHELL = 'vv-shell-v7';
 const DATA = 'vv-data';
 const VENDOR = 'vv-vendor-v2';
 

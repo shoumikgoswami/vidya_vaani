@@ -12,6 +12,7 @@ import { config } from '../config.js';
 import { todayIst, addDays } from '../nlp/dates.js';
 import { LANG_CODES } from '../../client/lib/languages.js';
 import { visibleClasses } from './teacher.js';
+import { hasJoined, issueCode } from '../services/teacher-codes.js';
 
 export const router = Router();
 router.use(['/school', '/teachers', '/classes', '/metrics', '/audit'], requireUser);
@@ -68,13 +69,14 @@ router.get('/school/config', async (req, res) => {
 /* ---------- Teachers ---------- */
 
 const teachersOf = async (schoolId) =>
-  (await all(
-    `SELECT m.id, m.active, m.speak_lang AS "speakLang", m.subjects, u.name, u.phone, u.email,
-       (SELECT COUNT(*) FROM session s WHERE s.user_id = u.id) > 0 AS "hasSignedIn"
+  Promise.all((await all(
+    `SELECT m.id, m.user_id, m.active, m.speak_lang AS "speakLang", m.subjects, u.name, u.phone, u.email
      FROM membership m JOIN app_user u ON u.id = m.user_id
      WHERE m.school_id = ? AND m.role = 'teacher' ORDER BY m.active DESC, u.name`,
     schoolId,
-  )).map((t) => ({ ...t, active: Boolean(t.active), hasSignedIn: Boolean(t.hasSignedIn), subjects: parseJson(t.subjects, []) }));
+  )).map(async ({ user_id: userId, ...t }) => ({
+    ...t, active: Boolean(t.active), joined: await hasJoined(userId), subjects: parseJson(t.subjects, []),
+  })));
 
 router.get('/teachers', async (req, res) => res.json({ teachers: await teachersOf((await adminSchool(req)).id) }));
 
@@ -92,7 +94,6 @@ router.post('/teachers', async (req, res) => {
   const body = parse(teacherInput, req.body);
   const phone = body.phone ? normalizePhone(body.phone) || fail(400, 'phone_invalid') : null;
   const email = body.email ? normalizeEmail(body.email) || fail(400, 'email_invalid') : null;
-  if (!phone && !email) fail(400, 'phone_or_email_needed');
   // The sample office is open to anyone, so it must not find, show or add people who really sign in.
   const visible = (found) => (school.is_demo && found?.clerk_user_id ? undefined : found);
   const held = [await userByPhone(phone), await userByEmail(email)];
@@ -113,7 +114,17 @@ router.post('/teachers', async (req, res) => {
   });
   await run('UPDATE app_user SET ui_lang = COALESCE(ui_lang, ?) WHERE id = ?', body.speakLang, user.id);
   await audit(req.user.id, 'teacher.add', { schoolId: school.id, entity: 'membership', entityId: id });
-  res.status(201).json({ id });
+  // Someone who has not signed in yet gets a code to join with.
+  res.status(201).json({ id, ...(await hasJoined(user.id) ? {} : await issueCode(id)) });
+});
+
+/** A fresh code for a teacher who has not joined. The earlier one stops working. */
+router.post('/teachers/:id/code', async (req, res) => {
+  const m = await get(`SELECT * FROM membership WHERE id = ? AND role = 'teacher'`, intParam(req.params.id)) || fail(404, 'teacher_not_found');
+  await requireAdmin(req.user, m.school_id);
+  if (!m.active || await hasJoined(m.user_id)) fail(409, 'teacher_joined');
+  await audit(req.user.id, 'teacher.code', { schoolId: m.school_id, entity: 'membership', entityId: m.id });
+  res.status(201).json(await issueCode(m.id));
 });
 
 router.patch('/teachers/:id', async (req, res) => {
@@ -206,54 +217,74 @@ router.patch('/classes/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
-/** 5A in 2026-27 becomes 6A in 2027-28. Students keep their QR code and every old note. */
-router.post('/classes/:id/promote', async (req, res) => {
+/** A class for a year, made if missing. It starts with the teachers that class had the year before. */
+async function classFor(schoolId, name, section, year) {
+  const found = await findClass(schoolId, name, section, year);
+  if (found) return found.id;
+  const before = await get(
+    `SELECT * FROM class WHERE school_id = ? AND name = ? AND section = ? AND academic_year < ? ORDER BY academic_year DESC LIMIT 1`,
+    schoolId, name, section, year,
+  );
+  const id = await insert('class', {
+    school_id: schoolId, name, section, academic_year: year, class_teacher_id: before?.class_teacher_id ?? null, created_at: now(),
+  });
+  if (before) {
+    await run(
+      `INSERT INTO class_teacher (class_id, membership_id, subjects)
+       SELECT ?, ct.membership_id, ct.subjects FROM class_teacher ct JOIN membership m ON m.id = ct.membership_id AND m.active = 1
+       WHERE ct.class_id = ?`,
+      id, before.id,
+    );
+  }
+  return id;
+}
+
+/**
+ * Each student moves on their own: to any class and section, or out of the school. Students not
+ * listed stay where they are. Everyone keeps their QR code and every old note.
+ */
+router.post('/classes/:id/move', async (req, res) => {
   const cls = await get('SELECT * FROM class WHERE id = ?', intParam(req.params.id)) || fail(404, 'class_not_found');
   await requireAdmin(req.user, cls.school_id);
   const body = parse(z.object({
-    name: z.string().trim().min(1).max(12),
-    section: z.string().trim().max(6).default(''),
     year: z.string().regex(/^\d{4}-\d{2}$/),
-    classTeacherId: z.number().int().nullable().optional(),
-    decisions: z.record(z.enum(['promote', 'hold', 'left'])),
+    moves: z.array(z.object({
+      studentId: z.number().int(),
+      to: z.union([z.literal('left'), z.object({ name: z.string().trim().min(1).max(12), section: z.string().trim().max(6).default('') })]),
+    })).min(1).max(200),
   }), req.body);
-  if (body.year <= cls.academic_year) fail(400, 'year_must_be_later');
+  if (body.year < cls.academic_year) fail(400, 'year_must_be_later');
 
-  const result = await tx(async () => {
-    const targetClass = async (name, section) => {
-      const found = await findClass(cls.school_id, name, section, body.year);
-      if (found) return found.id;
-      return insert('class', { school_id: cls.school_id, name, section, academic_year: body.year, created_at: now() });
-    };
-    const counts = { promote: 0, hold: 0, left: 0 };
-    let nextId = null;
-    let heldId = null;
-    for (const student of await all('SELECT id FROM student WHERE class_id = ? AND active = 1', cls.id)) {
-      const decision = body.decisions[student.id] || 'promote';
-      counts[decision] += 1;
-      await run('UPDATE student_history SET to_date = ? WHERE student_id = ? AND to_date IS NULL', now(), student.id);
-      if (decision === 'left') {
-        await update('student', student.id, { active: 0 });
+  const counts = await tx(async () => {
+    const done = { moved: 0, left: 0 };
+    const targets = new Map();
+    const here = new Set((await all('SELECT id FROM student WHERE class_id = ? AND active = 1', cls.id)).map((s) => s.id));
+    for (const { studentId, to } of body.moves) {
+      // Also stops one student being listed twice.
+      if (!here.delete(studentId)) fail(400, 'student_not_found');
+      let target = null;
+      if (to !== 'left') {
+        const section = to.section.toUpperCase();
+        const label = `${to.name}|${section}`;
+        if (!targets.has(label)) targets.set(label, await classFor(cls.school_id, to.name, section, body.year));
+        target = targets.get(label);
+        if (target === cls.id) continue;
+      }
+      await run('UPDATE student_history SET to_date = ? WHERE student_id = ? AND to_date IS NULL', now(), studentId);
+      if (target === null) {
+        await update('student', studentId, { active: 0 });
+        done.left += 1;
         continue;
       }
-      let target;
-      if (decision === 'promote') {
-        nextId ||= await targetClass(body.name, body.section);
-        target = nextId;
-      } else {
-        heldId ||= await targetClass(cls.name, cls.section);
-        target = heldId;
-      }
-      await update('student', student.id, { class_id: target });
-      await insert('student_history', { student_id: student.id, class_id: target, academic_year: body.year, from_date: now() });
+      await update('student', studentId, { class_id: target });
+      await insert('student_history', { student_id: studentId, class_id: target, academic_year: body.year, from_date: now() });
+      done.moved += 1;
     }
-    if (nextId && body.classTeacherId !== undefined) await assignTeachers(nextId, cls.school_id, body.classTeacherId);
-    if (heldId) await update('class', heldId, { class_teacher_id: cls.class_teacher_id });
-    await update('school', cls.school_id, { academic_year: body.year });
-    return { classId: nextId, counts };
+    await run('UPDATE school SET academic_year = ? WHERE id = ? AND academic_year < ?', body.year, cls.school_id, body.year);
+    return done;
   });
-  await audit(req.user.id, 'class.promote', { schoolId: cls.school_id, entity: 'class', entityId: cls.id, meta: result.counts });
-  res.json(result);
+  await audit(req.user.id, 'class.move', { schoolId: cls.school_id, entity: 'class', entityId: cls.id, meta: counts });
+  res.json({ counts });
 });
 
 /* ---------- Metrics (spec 14) ---------- */
@@ -309,11 +340,6 @@ export async function metricsFor(schoolId) {
     activeTeachers: { percent: percent(activeTeachers.length, teachers.length), of: teachers.length, target: 80 },
     parentsReplied: { percent: percent(repliers, parents), of: parents, target: 30 },
     heardBeforeDue: { percent: percent(beforeDue.length, deadlines.length), of: deadlines.length },
-    outcomes: await all(
-      `SELECT o.period, o.homework_done_pct AS "homeworkDonePct", o.fee_missed_count AS "feeMissedCount", c.name || c.section AS "className"
-       FROM outcome o LEFT JOIN class c ON c.id = o.class_id WHERE o.school_id = ? ORDER BY o.created_at DESC LIMIT 30`,
-      schoolId,
-    ),
   };
 }
 
@@ -338,24 +364,6 @@ router.get('/metrics', async (req, res) => {
   const mine = (await membershipsFor(req.user.id)).filter((m) => m.school_id === schoolId);
   if (!mine.length) fail(403, 'forbidden');
   res.json(await metricsFor(schoolId));
-});
-
-router.post('/metrics/outcomes', async (req, res) => {
-  const body = parse(z.object({
-    school: z.number().int(),
-    classId: z.number().int().nullable().optional(),
-    period: z.string().trim().min(2).max(40),
-    homeworkDonePct: z.number().int().min(0).max(100).nullable().optional(),
-    feeMissedCount: z.number().int().min(0).max(10000).nullable().optional(),
-  }), req.body);
-  if (!(await membershipsFor(req.user.id)).some((m) => m.school_id === body.school)) fail(403, 'forbidden');
-  if (body.classId && !await get('SELECT 1 FROM class WHERE id = ? AND school_id = ?', body.classId, body.school)) fail(400, 'class_not_found');
-  await insert('outcome', {
-    school_id: body.school, class_id: body.classId ?? null, period: body.period,
-    homework_done_pct: body.homeworkDonePct ?? null, fee_missed_count: body.feeMissedCount ?? null,
-    entered_by: req.user.id, created_at: now(),
-  });
-  res.status(201).json({ ok: true });
 });
 
 router.get('/audit', async (req, res) => {

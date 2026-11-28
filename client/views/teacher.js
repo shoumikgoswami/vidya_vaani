@@ -10,6 +10,7 @@ import {
   tagChip, reveal,
 } from '../lib/ui.js';
 import { installCard } from '../lib/install.js';
+import { moveChoices, moveSelect, destination } from './admin.js';
 import { voiceReply } from './reply.js';
 import { noteBody, markListened } from './note.js';
 import { speak } from '../lib/speak.js';
@@ -80,6 +81,23 @@ export function teacherHome(ctx) {
 
 /* ---------- One class ---------- */
 
+/** One child to another class, at any time of the year. */
+function moveSheet(cls, classes, student) {
+  const choices = moveChoices(classes, cls);
+  // Mid-year the usual move is to another section of the same class, so those come first.
+  const sections = ['A', 'B', 'C'].filter((section) => section !== cls.section)
+    .map((section) => [`${cls.name}|${section}`, t('move_to_class', { class: `${cls.name}${section}` })]);
+  const options = [...sections, ...choices.options.filter(([value]) => value !== choices.own && !sections.some(([v]) => v === value))];
+  sheet(`${t('move_one')}: ${student.name}`, (close) => form(async (values) => {
+    await post(`/classes/${cls.id}/move`, { year: values.year.trim(), moves: [{ studentId: student.id, to: destination(values.to) }] });
+    close();
+    reload();
+  },
+  field(t('class'), moveSelect('to', options, options[0][0])),
+  field(t('academic_year'), h('input', { name: 'year', value: cls.academicYear, required: true, dir: 'ltr' })),
+  button(t('move_now'), { iconName: 'arrow-up', kind: 'primary big block', type: 'submit' })));
+}
+
 function studentSheet(data, student) {
   const classId = data.class.id;
   sheet(student.name, (close) => {
@@ -101,6 +119,14 @@ function studentSheet(data, student) {
           close();
           toast(t('new_qr_done'));
           reload();
+        },
+      }),
+      store.me.portal === 'school' && adminSchoolId() === data.school.id && button(t('move_one'), {
+        iconName: 'arrow-up', kind: 'outline block',
+        onClick: async () => {
+          const { classes } = await api(`/classes?school=${data.school.id}`);
+          close();
+          moveSheet(data.class, classes, student);
         },
       }),
       adminSchoolId() === data.school.id && button(t('delete_student'), {
