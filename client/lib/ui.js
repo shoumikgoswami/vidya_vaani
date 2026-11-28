@@ -4,6 +4,15 @@ import { t, language, languageOf, formatDate, relativeDay, daysUntil } from './i
 import { speak, stopSpeaking } from './speak.js';
 import { LANGUAGES, lang } from './languages.js';
 
+const calm = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+/** Lets freshly loaded content step into place once. Later redraws stay still. */
+export function reveal(el) {
+  el.classList.add('reveal');
+  setTimeout(() => el.classList.remove('reveal'), 900);
+  return el;
+}
+
 export const TAG_ICONS = {
   homework: 'book-open', fee: 'currency-inr', exam: 'exam', event: 'calendar-blank', holiday: 'umbrella', notice: 'megaphone',
 };
@@ -59,6 +68,7 @@ export function toast(message, bad = false) {
   const box = document.getElementById('toasts');
   const el = h('div', { class: `toast${bad ? ' bad' : ''}` }, message);
   replace(box, el);
+  setTimeout(() => el.classList.add('leaving'), 3960);
   setTimeout(() => el.remove(), 4200);
 }
 
@@ -80,7 +90,13 @@ export function showError(error) {
 export function sheet(title, build) {
   const body = h('div', { class: 'sheet-body' });
   const dialog = h('dialog', { class: 'sheet', 'aria-label': title }, body);
-  const close = () => dialog.close();
+  const close = () => {
+    if (!dialog.open || dialog.classList.contains('closing')) return;
+    if (calm()) return dialog.close();
+    // Slides away first, then closes. The timer covers a phone that skips the animation.
+    dialog.classList.add('closing');
+    setTimeout(() => dialog.close(), 220);
+  };
   dialog.addEventListener('close', () => dialog.remove());
   dialog.addEventListener('click', (e) => e.target === dialog && close());
   add(body,
@@ -167,12 +183,18 @@ export function form(onSubmit, ...children) {
   return el;
 }
 
+/** Choices side by side. The marker slides to the chosen one. */
 export function segmented(options, selected, onPick) {
   const el = h('div', { class: 'segmented', role: 'group' });
-  const draw = (value) => replace(el, options.map(([id, label]) =>
-    h('button', { type: 'button', 'aria-pressed': String(id === value), onclick: () => { draw(id); onPick(id); } }, label)));
-  draw(selected);
-  return el;
+  const buttons = options.map(([id, label]) =>
+    h('button', { type: 'button', onclick: () => { mark(id); onPick(id); } }, label));
+  function mark(value) {
+    el.style.setProperty('--i', Math.max(0, options.findIndex(([id]) => id === value)));
+    buttons.forEach((b, i) => b.setAttribute('aria-pressed', String(options[i][0] === value)));
+  }
+  el.style.setProperty('--n', options.length);
+  mark(selected);
+  return add(el, buttons);
 }
 
 export function tagLabel(tag, today) {
@@ -189,19 +211,35 @@ export const tagChip = (tag, { today, onClick } = {}) =>
   h(onClick ? 'button' : 'span', { class: 'chip tag', type: onClick ? 'button' : undefined, onclick: onClick },
     icon(TAG_ICONS[tag.type], { size: 20 }), h('span', {}, tagLabel(tag, today)));
 
+/** A last date, drawn as a calendar leaf so it can be read without the words. */
 export function dueCard(tag, today) {
   const days = daysUntil(tag.dueDate, today);
   const count = days > 1 ? t('days_left', { n: days }) : days === 1 ? t('tomorrow') : days === 0 ? t('today') : t('date_passed');
+  const full = formatDate(tag.dueDate, { weekday: 'long', day: 'numeric', month: 'long' });
   return h('div', { class: `due${days >= 0 && days <= 1 ? ' soon' : ''}` },
-    icon(TAG_ICONS[tag.type]),
-    h('div', { class: 'grow' }, h('span', {}, tagLabel({ ...tag, dueDate: null })), h('strong', {}, formatDate(tag.dueDate, { weekday: 'long', day: 'numeric', month: 'long' })), h('span', {}, count)),
-    speakButton(() => `${t(`tag_${tag.type}`)}. ${formatDate(tag.dueDate, { weekday: 'long', day: 'numeric', month: 'long' })}. ${count}`, language(), { soft: false }));
+    h('div', { class: 'leaf', 'aria-hidden': 'true' },
+      h('small', {}, formatDate(tag.dueDate, { month: 'short' })), h('b', {}, Number(tag.dueDate.slice(8, 10)))),
+    h('div', { class: 'grow' }, h('span', {}, tagLabel({ ...tag, dueDate: null })), h('strong', {}, full), h('span', {}, count)),
+    speakButton(() => `${t(`tag_${tag.type}`)}. ${full}. ${count}`, language()));
 }
 
 const clock = (seconds) => {
   const s = Number.isFinite(seconds) ? Math.max(0, Math.round(seconds)) : 0;
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 };
+
+const BARS = 36;
+
+/** The same recording always draws the same bars. */
+function barHeights(seed) {
+  let n = [...seed].reduce((sum, c) => (sum * 31 + c.charCodeAt(0)) >>> 0, 7);
+  return Array.from({ length: BARS }, (_x, i) => {
+    n = (n * 1103515245 + 12345) >>> 0;
+    // Quieter at the ends, as speech is.
+    const shape = 0.45 + 0.55 * Math.sin((Math.PI * (i + 0.5)) / BARS);
+    return Math.max(0.16, shape * (0.35 + ((n >>> 16) % 66) / 100));
+  });
+}
 
 /**
  * The teacher's own voice. The audio is fetched whole, so the service worker can keep it for
@@ -211,10 +249,26 @@ export function player(src, { durationMs, hero = false, autoplay = false, onPlay
   const audio = new Audio();
   let loading = null;
   let reported = false;
+  let frame = 0;
   const total = () => (Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : (durationMs || 0) / 1000);
-  const glyph = h('span', { style: 'display:grid' }, icon('play'));
+  const glyph = h('span', { style: 'display:grid' }, icon('play', { weight: 'fill' }));
   const time = h('time', {}, clock((durationMs || 0) / 1000));
   const range = h('input', { type: 'range', min: 0, max: 1000, value: 0, 'aria-label': t('position') });
+  const bars = barHeights(src).map((height) => h('i', { style: `--h:${height.toFixed(2)}` }));
+  const scrub = h('div', { class: 'scrub' }, h('div', { class: 'bars', 'aria-hidden': 'true' }, bars), range);
+
+  function paint() {
+    const done = total() ? audio.currentTime / total() : 0;
+    const upTo = Math.ceil(done * BARS);
+    bars.forEach((bar, i) => {
+      bar.classList.toggle('on', i < upTo);
+      bar.classList.toggle('now', i === upTo - 1);
+    });
+  }
+  function follow() {
+    paint();
+    if (!audio.paused) frame = requestAnimationFrame(follow);
+  }
 
   const load = () => {
     loading ||= fetch(src, { credentials: 'same-origin' })
@@ -242,28 +296,56 @@ export function player(src, { durationMs, hero = false, autoplay = false, onPlay
   }
 
   const play = h('button', { type: 'button', class: 'play', 'aria-label': t('play'), onclick: () => toggle() }, glyph);
+  const box = h('div', { class: `player${hero ? ' hero' : ''}` }, play, h('div', { class: 'track' }, scrub, time));
   audio.addEventListener('play', () => {
-    replace(glyph, icon('pause'));
+    replace(glyph, icon('pause', { weight: 'fill' }));
     play.setAttribute('aria-label', t('pause'));
+    box.classList.add('playing');
+    cancelAnimationFrame(frame);
+    follow();
     if (!reported) {
       reported = true;
       onPlay?.();
     }
   });
   audio.addEventListener('pause', () => {
-    replace(glyph, icon('play'));
+    replace(glyph, icon('play', { weight: 'fill' }));
     play.setAttribute('aria-label', t('play'));
+    box.classList.remove('playing');
+    paint();
   });
   audio.addEventListener('timeupdate', () => {
     range.value = total() ? Math.round((audio.currentTime / total()) * 1000) : 0;
     time.textContent = `${clock(audio.currentTime)} / ${clock(total())}`;
+    paint();
   });
   range.addEventListener('input', () => {
-    if (total() && audio.src) audio.currentTime = (range.value / 1000) * total();
+    if (total() && audio.src) {
+      audio.currentTime = (range.value / 1000) * total();
+      paint();
+    }
   });
   if (autoplay) setTimeout(() => toggle(true), 350);
-  onLeave?.(() => audio.pause());
-  return h('div', { class: `player${hero ? ' hero' : ''}` }, play, h('div', { class: 'track' }, range, time));
+  onLeave?.(() => {
+    audio.pause();
+    cancelAnimationFrame(frame);
+  });
+  return box;
+}
+
+/** The saved tick, which draws itself. */
+export function tick() {
+  const make = (name, attributes) => {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', name);
+    for (const [key, value] of Object.entries(attributes)) el.setAttribute(key, value);
+    return el;
+  };
+  const svg = make('svg', { viewBox: '0 0 108 108', class: 'tick', 'aria-hidden': 'true' });
+  svg.append(
+    make('circle', { cx: 54, cy: 54, r: 48, transform: 'rotate(-90 54 54)' }),
+    make('path', { d: 'M33 56 L48 71 L77 40' }),
+  );
+  return svg;
 }
 
 export const empty = (iconName, key, action) =>

@@ -8,7 +8,7 @@ import { lang as languageInfo } from '../lib/languages.js';
 import { navigate, speakLanguage } from '../lib/state.js';
 import {
   button, sheet, skeletons, failure, showError, notice, segmented, languageSheet, tagChip, TAG_ICONS, player,
-  nativeName, form, field, guide, speakButton,
+  nativeName, form, field, guide, speakButton, tick,
 } from '../lib/ui.js';
 
 const TAG_TYPES = Object.keys(TAG_ICONS);
@@ -128,7 +128,7 @@ export async function confirm(ctx) {
       const key = result.recipients > 1 ? 'saved_class' : 'saved';
       const text = t(key, { n: result.recipients });
       replace(ctx.root,
-        h('div', { class: 'done' }, icon('check-circle'), h('h1', { role: 'status' }, text)),
+        h('div', { class: 'done' }, tick(), h('h1', { role: 'status' }, text)),
         button(t('next_student'), { iconName: 'qr-code', kind: 'primary big block', onClick: () => navigate('/scan') }),
         button(t('see_note'), { kind: 'outline block', href: `/t/note/${id}` }));
       sessionStorage.removeItem(`vv.note.${id}`);

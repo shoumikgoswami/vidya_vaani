@@ -30,9 +30,9 @@ export const replace = (el, ...children) => {
   return add(el, ...children);
 };
 
-export const icon = (name, { size, flip } = {}) =>
+export const icon = (name, { size, flip, weight = 'bold' } = {}) =>
   h('span', {
     class: `ic${flip ? ' flip' : ''}`,
     'aria-hidden': 'true',
-    style: `--src:url('/vendor/icons/bold/${name}-bold.svg')${size ? `;--size:${size}px` : ''}`,
+    style: `--src:url('/vendor/icons/${weight}/${name}-${weight}.svg')${size ? `;--size:${size}px` : ''}`,
   });

@@ -7,9 +7,8 @@ import { LANGUAGES, lang as languageInfo } from '../lib/languages.js';
 import { navigate, adminSchoolId, refreshMe, speakLanguage } from '../lib/state.js';
 import {
   guide, button, sheet, confirmSheet, skeletons, failure, toast, notice, empty, avatar, field, form, segmented,
-  languageSelect, nativeName,
+  languageSelect, nativeName, reveal,
 } from '../lib/ui.js';
-import { schoolPoster } from './teacher.js';
 
 const reload = () => navigate(location.pathname + location.search, { replace: true });
 
@@ -20,6 +19,7 @@ async function section(ctx, loader, draw) {
     const data = await loader(adminSchoolId());
     if (!ctx.alive()) return;
     holder.textContent = '';
+    reveal(holder);
     draw(data, holder);
   } catch (error) {
     if (ctx.alive()) replace(holder, failure(error, reload));
@@ -61,7 +61,7 @@ export function school(ctx) {
     const checks = h('div', { class: 'grid' }, LANGUAGES.map((l) => h('label', { class: 'check' },
       h('input', { type: 'checkbox', name: 'enabled', value: l.code, checked: data.enabledLangs.includes(l.code) }),
       h('span', { lang: l.code }, l.native))));
-    add(box,
+    add(box, h('div', { class: 'split' }, h('div', { class: 'split-col' },
       form(async (values, el) => {
         await patch(`/school?school=${data.id}`, {
           name: values.name, address: values.address, qrMode: values.qrMode, defaultLang: values.defaultLang,
@@ -79,16 +79,11 @@ export function school(ctx) {
       field(t('default_language'), languageSelect('defaultLang', data.defaultLang)),
       h('details', { class: 'card' }, h('summary', {}, h('strong', {}, t('enabled_languages'))), checks),
       field(t('keep_notes'), h('input', { name: 'retentionYears', type: 'number', min: 0, max: 10, value: data.retentionYears }), t('keep_notes_help')),
-      button(t('save'), { iconName: 'check', kind: 'primary big block', type: 'submit' })),
-      button(t('school_qr'), { iconName: 'qr-code', kind: 'outline block', href: '/admin/school-qr' }),
-      providerPanel());
-  });
-}
-
-export function schoolQr(ctx) {
-  return section(ctx, (id) => api(`/school-qr?school=${id}`), (data, box) => {
-    add(box, h('div', { class: 'no-print stack' }, h('h1', {}, t('school_qr')), guide('printer', 'print_guide'),
-      button(t('print_or_pdf'), { iconName: 'printer', kind: 'primary big block', onClick: () => window.print() })), schoolPoster(data));
+      button(t('save'), { iconName: 'check', kind: 'primary big block', type: 'submit' }))),
+      h('div', { class: 'split-col' },
+        button(t('stickers_all'), { iconName: 'printer', kind: 'outline block', href: '/admin/stickers' }),
+        button(t('school_qr'), { iconName: 'qr-code', kind: 'outline block', href: '/admin/school-qr' }),
+        providerPanel())));
   });
 }
 
@@ -189,16 +184,20 @@ export function people(ctx) {
           : empty('users-three', 'no_teachers')),
       classes: () => replace(area,
         button(t('add_class'), { iconName: 'plus', kind: 'primary big block', onClick: () => classSheet(data.id, data.teachers) }),
+        data.classes.some((c) => c.students > 0)
+          && button(t('stickers_all'), { iconName: 'printer', kind: 'outline block', href: '/admin/stickers' }),
         data.classes.length
           ? data.classes.map((c) => h('div', { class: 'card' },
-            h('div', { class: 'row' }, h('span', { class: 'avatar' }, `${c.name}${c.section}`),
+            h('div', { class: 'row' }, h('span', { class: 'avatar square' }, `${c.name}${c.section}`),
               h('div', { class: 'grow' }, h('strong', {}, `${t('class')} ${c.name}${c.section} · ${c.academicYear}`), h('br'),
                 h('span', { class: 'muted small' }, [childCount(c.students),
                   c.teachers.find((x) => x.membershipId === c.classTeacherId)?.name].filter(Boolean).join(' · ')))),
             h('div', { class: 'pair' },
               button(t('open_class'), { kind: 'outline small', href: `/t/class/${c.id}` }),
               button(t('edit_class'), { kind: 'outline small', onClick: () => classSheet(data.id, data.teachers, c) })),
-            c.students > 0 && button(t('promote'), { iconName: 'arrow-up', kind: 'small', href: `/admin/promote/${c.id}` })))
+            c.students > 0 && h('div', { class: 'pair' },
+              button(t('print_stickers'), { iconName: 'qr-code', kind: 'quiet small', href: `/t/stickers/${c.id}` }),
+              button(t('promote'), { iconName: 'arrow-up', kind: 'quiet small', href: `/admin/promote/${c.id}` }))))
           : empty('chalkboard-teacher', 'no_classes_yet')),
     };
     add(box, segmented([['teachers', t('teachers')], ['classes', t('classes')]], tab, (v) => {
@@ -243,7 +242,7 @@ export function promote(ctx) {
       field(t('academic_year'), h('input', { name: 'year', value: year, required: true })),
       field(t('class_teacher'), h('select', { name: 'classTeacherId', value: data.current?.classTeacherId ?? '' },
         h('option', { value: '' }, t('none')), data.teachers.map((x) => h('option', { value: x.id }, x.name)))),
-      h('ul', { class: 'list' }, data.students.map((s) => h('li', { class: 'card' }, h('strong', {}, s.name),
+      h('ul', { class: 'steps' }, data.students.map((s) => h('li', { class: 'card' }, h('strong', {}, s.name),
         segmented([['promote', t('move_up')], ['hold', t('hold_back')], ['left', t('has_left')]], 'promote', (v) => { decisions[s.id] = v; })))),
       button(t('promote'), { iconName: 'arrow-up', kind: 'primary big block', type: 'submit' })));
   });
@@ -251,7 +250,10 @@ export function promote(ctx) {
 
 /* ---------- Metrics ---------- */
 
-const stat = (label, value, detail) => h('div', { class: 'stat' }, h('span', { class: 'muted small' }, label), h('b', {}, value ?? '-'), h('span', { class: 'muted small' }, detail || ''));
+/** One figure. A percentage also shows how far it has got. */
+const stat = (label, value, detail, share) => h('div', { class: 'stat' }, h('span', { class: 'muted small' }, label),
+  h('b', {}, value ?? '-'), share != null && h('span', { class: 'meter', 'aria-hidden': 'true' }, h('i', { style: `--v:${share}` })),
+  h('span', { class: 'muted small' }, detail || ''));
 const pct = (m) => (m.percent == null ? null : `${m.percent}%`);
 const table = (headings, rows) => h('div', { class: 'table-wrap' }, h('table', {},
   h('thead', {}, h('tr', {}, headings.map((x) => h('th', {}, x)))),
@@ -266,11 +268,11 @@ export function reports(ctx) {
     const target = (v, unit = '%') => t('target', { value: `${v}${unit}` });
     add(box,
       h('div', { class: 'stats' },
-        stat(t('metric_heard_24h'), pct(m.heardIn24h), target(m.heardIn24h.target)),
+        stat(t('metric_heard_24h'), pct(m.heardIn24h), target(m.heardIn24h.target), m.heardIn24h.percent),
         stat(t('metric_capture'), m.medianCaptureSeconds.value == null ? null : `${m.medianCaptureSeconds.value}s`, target(m.medianCaptureSeconds.target, 's')),
-        stat(t('metric_teachers'), pct(m.activeTeachers), target(m.activeTeachers.target)),
-        stat(t('metric_replies'), pct(m.parentsReplied), target(m.parentsReplied.target)),
-        stat(t('metric_before_due'), pct(m.heardBeforeDue), ''),
+        stat(t('metric_teachers'), pct(m.activeTeachers), target(m.activeTeachers.target), m.activeTeachers.percent),
+        stat(t('metric_replies'), pct(m.parentsReplied), target(m.parentsReplied.target), m.parentsReplied.percent),
+        stat(t('metric_before_due'), pct(m.heardBeforeDue), '', m.heardBeforeDue.percent),
         stat(t('metric_notes'), m.notes, '')),
       h('div', { class: 'card' }, h('h2', {}, t('quality')), m.quality.length
         ? table([t('language'), t('metric_notes'), t('low_conf_pct'), t('edited_pct')], m.quality.map((q) => [

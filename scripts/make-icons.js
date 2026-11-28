@@ -19,7 +19,7 @@ if (!browser) throw new Error('Set CHROME_PATH to a Chrome or Edge executable.')
 
 const mark = fs.readFileSync(path.join(img, 'icon.svg'), 'utf8');
 // The status bar badge is the white bars alone; Android draws it as a silhouette.
-const badge = mark.replace(/<rect width="96" height="96"[^>]*\/>/, '').replaceAll('#f4fbf6', '#ffffff');
+const badge = mark.replace(/<rect width="96" height="96"[^>]*\/>/, '').replaceAll('#ffb020', '#ffffff');
 const maskable = fs.readFileSync(path.join(img, 'icon-maskable.svg'), 'utf8');
 
 const outputs = [

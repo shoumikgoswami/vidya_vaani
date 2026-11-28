@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from '../server/config.js';
-import { cspDirectives, fontStylesheet, modules, VENDOR_FILES, VENDOR_DIRS } from '../server/web.js';
+import { cspDirectives, fontStylesheet, modules, FONTS, VENDOR_FILES, VENDOR_DIRS } from '../server/web.js';
 
 const dist = path.join(ROOT, 'dist');
 const out = (url) => path.join(dist, ...url.split('/').filter(Boolean));
@@ -16,14 +16,17 @@ fs.rmSync(dist, { recursive: true, force: true });
 copy(path.join(ROOT, 'client'), dist);
 
 for (const [url, file] of Object.entries(VENDOR_FILES)) copy(file, out(url));
-// Only the icon weight the app draws.
-copy(path.join(VENDOR_DIRS['/vendor/icons'], 'bold'), out('/vendor/icons/bold'));
+// Only the icon weights the app draws.
+for (const weight of ['bold', 'fill']) copy(path.join(VENDOR_DIRS['/vendor/icons'], weight), out(`/vendor/icons/${weight}`));
 
 const css = fontStylesheet();
 fs.writeFileSync(out('/vendor/fonts.css'), css);
 const fonts = [...new Set([...css.matchAll(/url\(\/vendor\/fonts\/([^)]+)\)/g)].map((m) => m[1]))];
 if (!fonts.length) throw new Error('no fonts found: is node_modules complete?');
-for (const file of fonts) copy(path.join(modules, '@fontsource', file), out(`/vendor/fonts/${file}`));
+for (const file of fonts) {
+  const [name, ...rest] = file.split('/');
+  copy(path.join(FONTS.find((f) => f.name === name).dir, ...rest), out(`/vendor/fonts/${file}`));
+}
 
 const kebab = (name) => name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 const csp = Object.entries(cspDirectives()).map(([name, values]) => `${kebab(name)} ${values.join(' ')}`).join(';');

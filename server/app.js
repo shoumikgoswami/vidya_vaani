@@ -6,7 +6,7 @@ import path from 'node:path';
 import { config, ROOT } from './config.js';
 import { HttpError } from './lib/util.js';
 import { sessionMiddleware, csrfProtection } from './auth/session.js';
-import { cspDirectives, fontStylesheet, modules, VENDOR_FILES, VENDOR_DIRS } from './web.js';
+import { cspDirectives, fontStylesheet, FONTS, VENDOR_FILES, VENDOR_DIRS } from './web.js';
 import { router as auth } from './routes/auth.js';
 import { router as resolve } from './routes/resolve.js';
 import { router as teacher } from './routes/teacher.js';
@@ -32,7 +32,7 @@ function serveClient(app) {
   for (const [url, dir] of Object.entries(VENDOR_DIRS)) app.use(url, express.static(dir, vendor));
   const fonts = fontStylesheet();
   app.get('/vendor/fonts.css', (_req, res) => res.type('text/css').set('Cache-Control', 'public, max-age=86400').send(fonts));
-  app.use('/vendor/fonts', express.static(path.join(modules, '@fontsource'), vendor));
+  for (const font of FONTS) app.use(`/vendor/fonts/${font.name}`, express.static(font.dir, vendor));
   app.use(express.static(path.join(ROOT, 'client'), { index: false, setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') }));
 }
 

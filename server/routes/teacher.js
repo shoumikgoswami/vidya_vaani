@@ -1,7 +1,6 @@
 // Classes, students, QR codes, approvals, the voice inbox and form filling.
 import { Router } from 'express';
 import { z } from 'zod';
-import QRCode from 'qrcode';
 import { config } from '../config.js';
 import { get, all, run, insert, update, tx, byNumber } from '../db/index.js';
 import { parse, fail, intParam, normalizePhone, normalizeEmail, randomToken, now, audit } from '../lib/util.js';
@@ -17,6 +16,7 @@ import { enqueue } from '../jobs/queue.js';
 import { pushNewNote } from '../jobs/handlers.js';
 import { completeJson, llmAvailable } from '../providers/llm.js';
 import { aiAllowedFor } from '../services/demo-budget.js';
+import { brandedQr } from '../services/qr.js';
 import { transcribe } from '../providers/asr.js';
 import { audioUpload, summarise, summariseAll, heardByNote, recipientsByNote, recipientsOf, presentNote } from '../services/notes.js';
 
@@ -24,7 +24,6 @@ export const router = Router();
 router.use(['/classes', '/students', '/qr', '/approvals', '/inbox', '/formfill', '/school-qr'], requireUser);
 
 export const stickerUrl = (token) => `${config.publicBaseUrl}/s/${token}`;
-export const qrSvg = (text) => QRCode.toString(text, { type: 'svg', errorCorrectionLevel: 'M', margin: 1 });
 
 const pendingLinks = (classId) =>
   all(
@@ -190,9 +189,9 @@ router.post('/students/:id/rotate-token', async (req, res) => {
 router.get('/classes/:id/stickers', async (req, res) => {
   const { cls } = await requireClassManager(req.user, intParam(req.params.id));
   const school = await get('SELECT * FROM school WHERE id = ?', cls.school_id);
-  const students = await Promise.all((await studentsOf(cls.id)).map(async (s) => ({
-    id: s.id, name: s.name, rollNo: s.rollNo, svg: await qrSvg(stickerUrl(s.token)),
-  })));
+  const students = (await studentsOf(cls.id)).map((s) => ({
+    id: s.id, name: s.name, rollNo: s.rollNo, svg: brandedQr(stickerUrl(s.token)),
+  }));
   res.json({
     school: { name: school.name, qrMode: school.qr_mode, hasLogo: Boolean(school.logo_path), id: school.id },
     className: `${cls.name}${cls.section}`,
@@ -204,7 +203,7 @@ router.get('/classes/:id/stickers', async (req, res) => {
 router.get('/qr/:token.svg', async (req, res) => {
   const student = await get('SELECT * FROM student WHERE token = ?', req.params.token) || fail(404, 'qr_not_found');
   await requireStudentManager(req.user, student.id);
-  res.type('image/svg+xml').send(await qrSvg(stickerUrl(student.token)));
+  res.type('image/svg+xml').send(brandedQr(stickerUrl(student.token)));
 });
 
 router.get('/school-qr', async (req, res) => {
@@ -212,7 +211,7 @@ router.get('/school-qr', async (req, res) => {
   if (!(await membershipsFor(req.user.id)).some((m) => m.school_id === schoolId)) fail(403, 'forbidden');
   const school = await get('SELECT * FROM school WHERE id = ?', schoolId);
   const url = `${config.publicBaseUrl}/k/${school.school_token}`;
-  res.json({ school: { name: school.name, id: school.id, hasLogo: Boolean(school.logo_path) }, url, svg: await qrSvg(url) });
+  res.json({ school: { name: school.name, id: school.id, hasLogo: Boolean(school.logo_path) }, url, svg: brandedQr(url) });
 });
 
 router.post('/approvals/:linkId', async (req, res) => {

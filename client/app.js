@@ -13,11 +13,12 @@ import { login, schoolLogin, setup } from './views/auth.js';
 import { scan, sticker, schoolSticker } from './views/scan.js';
 import { record } from './views/record.js';
 import { confirm } from './views/confirm.js';
-import { teacherHome, classView, addStudents, stickers, inbox } from './views/teacher.js';
+import { teacherHome, classView, addStudents, inbox } from './views/teacher.js';
+import { classStickers, allStickers, schoolQr } from './views/stickers.js';
 import { noteView } from './views/note.js';
 import { diary } from './views/parent.js';
 import { account } from './views/account.js';
-import { school, schoolQr, people, promote, reports } from './views/admin.js';
+import { school, people, promote, reports } from './views/admin.js';
 
 // [pattern, view, options]
 const ROUTES = [
@@ -30,22 +31,23 @@ const ROUTES = [
   ['/s/:token', sticker],
   ['/k/:token', schoolSticker],
   ['/me', account, { auth: true, title: 'me' }],
-  ['/t', teacherHome, { auth: true, role: 'teacher' }],
+  ['/t', teacherHome, { auth: true, role: 'teacher', wide: true }],
   ['/t/record', record, { auth: true }],
   ['/t/confirm/:id', confirm, { auth: true }],
-  ['/t/class/:id', classView, { auth: true }],
+  ['/t/class/:id', classView, { auth: true, wide: true }],
   ['/t/class/:id/add', addStudents, { auth: true }],
-  ['/t/stickers/:id', stickers, { auth: true, wide: true }],
+  ['/t/stickers/:id', classStickers, { auth: true, wide: true }],
   ['/t/inbox', inbox, { auth: true, role: 'teacher' }],
   ['/t/note/:id', noteView, { auth: true }],
   // No role needed: this is also where a brand-new account lands, with nothing linked yet.
   ['/p', diary, { auth: true }],
   ['/p/note/:id', noteView, { auth: true, role: 'parent' }],
   ['/admin', school, { auth: true, role: 'admin', wide: true }],
-  ['/admin/people', people, { auth: true, role: 'admin' }],
+  ['/admin/people', people, { auth: true, role: 'admin', wide: true }],
   ['/admin/promote/:id', promote, { auth: true, role: 'admin' }],
   ['/admin/reports', reports, { auth: true, role: 'admin', wide: true }],
   ['/admin/school-qr', schoolQr, { auth: true, role: 'admin' }],
+  ['/admin/stickers', allStickers, { auth: true, role: 'admin', wide: true }],
 ].map(([pattern, view, options = {}]) => ({
   view,
   options,
@@ -83,7 +85,7 @@ function drawTopbar(route) {
     onclick: () => (depth > 0 ? history.back() : navigate(homeFor())),
   }, icon('arrow-left', { flip: true }));
   const brand = h('a', { class: 'brand', href: signedIn() ? homeFor() : '/' },
-    h('img', { src: '/img/icon.svg', alt: '', width: 36, height: 36 }),
+    h('img', { src: '/img/icon.svg', alt: '', width: 34, height: 34 }),
     h('span', {}, 'Vidya Vaani', atSchoolOffice() && h('small', {}, t('school_signin'))));
   replace($('topbar'), h('div', { class: 'bar' },
     root ? brand : [back, h('span', { class: 'bar-title' }, route?.options.title ? t(route.options.title) : '')],
@@ -100,7 +102,8 @@ function drawTabs() {
   if (hidden) return replace($('tabs'));
   replace($('tabs'), h('div', { class: 'tabs-inner' }, TABS[area].map(([href, glyph, key]) =>
     h('a', { class: 'tab', href, 'aria-current': path === href ? 'page' : undefined, onclick: () => setRole(area) },
-      icon(glyph), t(key), href === '/t/inbox' && inboxCount > 0 && h('span', { class: 'badge' }, inboxCount)))));
+      h('span', { class: 'pip' }, icon(glyph, { weight: path === href ? 'fill' : 'bold' })), t(key),
+      href === '/t/inbox' && inboxCount > 0 && h('span', { class: 'badge' }, inboxCount)))));
 }
 
 async function refreshInboxCount() {
@@ -140,14 +143,7 @@ async function render(state = {}) {
     setRole(route.options.role);
   }
 
-  main.classList.toggle('wide', Boolean(route.options.wide));
-  drawBanner();
-  drawTopbar(route);
-  drawTabs();
-
   const root = h('div', { class: 'view' });
-  replace(main, root);
-  window.scrollTo(0, 0);
   const ctx = {
     root,
     params: route.regex.exec(path).groups || {},
@@ -156,17 +152,44 @@ async function render(state = {}) {
     alive: () => mine === navigation,
     onLeave: (fn) => (mine === navigation ? cleanups.push(fn) : fn()),
   };
-  try {
-    await route.view(ctx);
-  } catch (error) {
+  const failed = (error) => {
     console.error(error);
     if (ctx.alive()) replace(root, failure(error, () => render(state)));
-  }
+  };
+  let shown;
+  await transition(path, () => {
+    if (!ctx.alive()) return;
+    main.classList.toggle('wide', Boolean(route.options.wide));
+    drawBanner();
+    drawTopbar(route);
+    drawTabs();
+    replace(main, root);
+    window.scrollTo(0, 0);
+    // The view starts here but is not waited for: the screen change must not hang on the network.
+    shown = Promise.resolve().then(() => route.view(ctx)).catch(failed);
+  });
+  await shown;
   if (ctx.alive()) refreshInboxCount();
+}
+
+/** Slides between screens where the browser can. The same screen redrawing itself stays still. */
+let lastPath = null;
+async function transition(path, update) {
+  // The first screen replaces the splash without ceremony.
+  const same = lastPath === null || path === lastPath;
+  lastPath = path;
+  const calm = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  if (same || calm || !document.startViewTransition || document.hidden) return update();
+  const change = document.startViewTransition(update);
+  // A newer screen change cancels this one's animation, which is not an error.
+  change.ready.catch(() => {});
+  change.finished.catch(() => {});
+  await change.updateCallbackDone.catch((error) => console.warn(error));
 }
 
 window.addEventListener('navigate', (event) => {
   const { path, replace: swap, state } = event.detail;
+  document.documentElement.dataset.nav = 'forward';
   if (swap) history.replaceState(state, '', path);
   else {
     history.pushState(state, '', path);
@@ -177,6 +200,7 @@ window.addEventListener('navigate', (event) => {
 
 window.addEventListener('popstate', (event) => {
   depth = Math.max(0, depth - 1);
+  document.documentElement.dataset.nav = 'back';
   render(event.state?.autostart ? {} : event.state || {});
 });
 

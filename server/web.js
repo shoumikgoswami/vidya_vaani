@@ -29,21 +29,19 @@ export function cspDirectives() {
 
 export const modules = path.join(ROOT, 'node_modules');
 
-const FONT_PACKAGES = [
-  'noto-sans', 'noto-sans-devanagari', 'noto-sans-bengali', 'noto-sans-tamil', 'noto-sans-telugu', 'noto-sans-kannada',
-  'noto-sans-malayalam', 'noto-sans-gujarati', 'noto-sans-gurmukhi', 'noto-sans-oriya', 'noto-sans-ol-chiki',
-  'noto-sans-meetei-mayek', 'noto-sans-arabic', 'noto-nastaliq-urdu',
-];
+// Anek is one family drawn for India's scripts; Noto covers the scripts Anek does not have.
+const ANEK = ['latin', 'devanagari', 'bangla', 'tamil', 'telugu', 'kannada', 'malayalam', 'gujarati', 'gurmukhi', 'odia'];
+const NOTO = ['noto-sans-ol-chiki', 'noto-sans-meetei-mayek', 'noto-sans-arabic', 'noto-nastaliq-urdu'];
+
+export const FONTS = [
+  ...ANEK.map((script) => ({ name: `anek-${script}`, scope: '@fontsource-variable', sheets: ['index.css'] })),
+  ...NOTO.map((name) => ({ name, scope: '@fontsource', sheets: ['400.css', '700.css'] })),
+].map((font) => ({ ...font, dir: path.join(modules, font.scope, font.name) }));
 
 /** One stylesheet for every script. Each font file downloads only when its characters appear. */
-export function fontStylesheet(root = path.join(modules, '@fontsource')) {
-  return FONT_PACKAGES.flatMap((name) => ['400', '700'].map((weight) => {
-    try {
-      return fs.readFileSync(path.join(root, name, `${weight}.css`), 'utf8').replaceAll('url(./files/', `url(/vendor/fonts/${name}/files/`);
-    } catch {
-      return '';
-    }
-  })).join('\n');
+export function fontStylesheet() {
+  return FONTS.flatMap(({ name, dir, sheets }) => sheets.map((sheet) =>
+    fs.readFileSync(path.join(dir, sheet), 'utf8').replaceAll('url(./files/', `url(/vendor/fonts/${name}/files/`))).join('\n');
 }
 
 export const VENDOR_FILES = {

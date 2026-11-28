@@ -26,6 +26,18 @@ These override the sections below where they differ.
 | Speech requests (5.2) | StreamingRecognize for large audio | Notes are capped at 2 minutes and sent as FLAC when the WAV exceeds 3.5 MB, so only `Recognize` is used |
 | Settings (12) | `SMS_PROVIDER`, `SMS_API_KEY` | Removed. Clerk sends the SMS. Added `CLERK_*` and `OPENROUTER_*` |
 
+## Changes agreed during the build (v2.2, 28 Nov 2026)
+
+These override v2.1 and the sections below where they differ.
+
+| Topic | Before | v2.2 builds |
+|---|---|---|
+| Database (9, 11) | SQLite file, audio on disk | **Postgres**: PGlite inside the container (no setup), Neon when `DATABASE_URL` is set. Recordings and read-aloud audio live in the database |
+| Hosting (R7) | One container behind a proxy | Also **Netlify**: static app, the API as a function, a background function for AI jobs, a five-minute scheduled function. Live at `vidyavaani.shoumikgoswami.com` |
+| Look (4) | Leaf green, Noto | New identity: school-ink blue, Anek type, voice-bar "V" logo, short transitions that respect reduced motion |
+| QR (J1, S15) | Plain codes, 12 or 24 a page | Branded codes with the logo; class or whole-school sheets of 8, 12 or 24 stickers; child stickers also work when a school uses one QR |
+| Public demo (15) | Local only | Demo school resets nightly and has a daily AI limit |
+
 ---
 
 ## 0. Hackathon build rules (hard constraints)

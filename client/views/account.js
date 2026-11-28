@@ -12,7 +12,7 @@ import { enablePush, pushState } from '../lib/push.js';
 import { install, installState } from '../lib/install.js';
 
 const row = (glyph, title, detail, onClick) =>
-  h('button', { type: 'button', class: 'item', onclick: onClick }, icon(glyph, { size: 28 }),
+  h('button', { type: 'button', class: 'item', onclick: onClick }, h('span', { class: 'lead' }, icon(glyph)),
     h('span', { class: 'grow' }, h('strong', {}, title), detail && h('span', { class: 'muted small' }, detail)),
     icon('caret-right', { flip: true }));
 
@@ -27,6 +27,7 @@ export function account(ctx) {
         setRole(r);
         navigate(homeFor(r));
       })),
+    h('div', { class: 'list' },
     row('globe', t('app_language'), nativeName(language()), () => languageSheet(t('app_language'), language(), chooseLanguage)),
     children.filter((c) => c.status === 'active').map((c) => row(
       'translate', t('notes_for_child', { child: c.name }), nativeName(c.readLang || user.uiLang || 'en'),
@@ -44,7 +45,7 @@ export function account(ctx) {
         ? row('users', t('family_signin'), null, () => navigate('/login')) : null
       : store.me.memberships.some((m) => m.role === 'admin')
         ? row('chalkboard-teacher', t('school_signin'), null, () => navigate('/school/login')) : null,
-    row('info', t('help_title'), null, () => navigate('/help')),
+    row('info', t('help_title'), null, () => navigate('/help'))),
     children.length > 0 && h('details', { class: 'card' },
       h('summary', {}, h('strong', {}, t('privacy_title'))),
       h('div', { class: 'row' }, h('p', { class: 'grow muted' }, t('privacy_intro')), speakButton(consentText(), languageOf('consent_stored'))),

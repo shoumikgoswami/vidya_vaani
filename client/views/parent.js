@@ -5,7 +5,7 @@ import { t, languageOf, formatDate, relativeDay } from '../lib/i18n.js';
 import { speak } from '../lib/speak.js';
 import { store, navigate, refreshMe } from '../lib/state.js';
 import {
-  button, skeletons, failure, player, dueCard, empty, speakButton, TAG_ICONS, tagChip, notice,
+  button, skeletons, failure, player, dueCard, empty, speakButton, TAG_ICONS, tagChip, notice, avatar, reveal,
 } from '../lib/ui.js';
 import { installCard } from '../lib/install.js';
 import { consentCard } from './consent.js';
@@ -21,12 +21,12 @@ const open = (note, childId) => `/p/note/${note.id}?child=${childId}`;
 
 function latestCard(ctx, note, childId, readLang, today, autoplay) {
   const due = note.nextDue && note.tags.find((x) => x.dueDate === note.nextDue);
-  return h('article', { class: `card${note.heard ? '' : ' unheard'}` },
-    h('div', { class: 'row' }, h('div', { class: 'grow' }, h('strong', {}, note.authorName), h('br'),
+  return h('article', { class: `card lift${note.heard ? '' : ' unheard'}` },
+    h('div', { class: 'row' }, avatar(note.authorName), h('div', { class: 'grow' }, h('strong', {}, note.authorName), h('br'),
       h('span', { class: 'muted small' }, relativeDay(note.publishedAt.slice(0, 10), today) || formatDate(note.publishedAt))),
-    !note.heard && h('span', { class: 'chip tag' }, t('new_note'))),
+    !note.heard && h('span', { class: 'chip good' }, t('new_note'))),
     note.audioUrl && player(note.audioUrl, { durationMs: note.durationMs, hero: true, autoplay, onLeave: ctx.onLeave, onPlay: () => markListened(note.id) }),
-    note.shown && h('div', { class: 'row', style: 'align-items:flex-start' },
+    note.shown && h('div', { class: 'row top' },
       h('p', { class: 'note-text grow', dir: 'auto', lang: note.translated ? readLang : note.lang }, note.shown),
       speakButton(note.shown, note.translated ? readLang : note.lang)),
     due ? dueCard(due, today) : h('div', { class: 'chips' }, note.tags.map((x) => tagChip(x, { today }))),
@@ -43,7 +43,7 @@ function summaryCard(childId) {
       h('p', {}, `${s.newNotes === 1 ? t('week_new_one') : t('week_new', { n: s.newNotes })} · ${t('week_unheard', { n: s.unheard })}`),
       s.due.length
         ? h('ul', { class: 'list' }, s.due.map((d, i) => h('li', {}, h('a', { class: 'item', href: `/p/note/${d.noteId}?child=${childId}` },
-          icon(TAG_ICONS[d.type], { size: 28 }), h('span', { class: 'grow' }, h('strong', {}, lines[i]))))))
+          h('span', { class: 'lead' }, icon(TAG_ICONS[d.type])), h('span', { class: 'grow' }, h('strong', {}, lines[i])), icon('caret-right', { flip: true })))))
         : h('p', { class: 'muted' }, t('week_nothing_due')));
   }).catch(() => box.remove());
   return box;
@@ -51,7 +51,7 @@ function summaryCard(childId) {
 
 const row = (note, childId) =>
   h('li', {}, h('a', { class: `item${note.heard ? '' : ' unheard'}`, href: open(note, childId) },
-    icon(note.tags[0] ? TAG_ICONS[note.tags[0].type] : 'play', { size: 30 }),
+    h('span', { class: 'lead' }, icon(note.tags[0] ? TAG_ICONS[note.tags[0].type] : 'play')),
     h('span', { class: 'grow' },
       h('strong', { dir: 'auto' }, note.shown ? `${note.shown.slice(0, 70)}${note.shown.length > 70 ? '…' : ''}` : t('listen_only')),
       h('span', { class: 'muted small' }, [note.authorName, ...note.tags.map((x) => t(`tag_${x.type}`)), !note.heard && t('new_note')].filter(Boolean).join(' · '))),
@@ -83,7 +83,7 @@ export async function diary(ctx) {
       onclick: () => navigate(`/p?child=${c.studentId}`, { replace: true }),
     }, c.name)));
   add(ctx.root, switcher,
-    h('div', {}, h('h1', {}, child.name), h('p', { class: 'muted' }, `${t('class')} ${child.className} · ${child.schoolName}`)));
+    h('div', { class: 'page-head' }, h('h1', {}, child.name), h('p', { class: 'muted' }, `${t('class')} ${child.className} · ${child.schoolName}`)));
 
   if (child.status === 'pending') {
     return add(ctx.root, notice('hourglass', [h('p', {}, t('link_pending', { child: child.name })),
@@ -113,7 +113,7 @@ export async function diary(ctx) {
     if (!ctx.alive() || mine !== generation) return;
 
     if (!filter && !cursor) {
-      replace(latest, data.notes[0]
+      replace(reveal(latest), data.notes[0]
         ? latestCard(ctx, data.notes[0], child.studentId, data.readLang, data.today, ctx.state.autoplay || !data.notes[0].heard)
         : empty('book-open', 'no_notes_yet'));
     }

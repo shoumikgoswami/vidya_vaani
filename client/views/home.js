@@ -4,7 +4,7 @@ import { api, post } from '../lib/api.js';
 import { t, languageOf } from '../lib/i18n.js';
 import { store, signedIn, navigate, homeFor, refreshMe, setRole } from '../lib/state.js';
 import { installCard } from '../lib/install.js';
-import { guide, button, sheet, avatar, skeletons, showError, speakButton, toast } from '../lib/ui.js';
+import { guide, button, sheet, avatar, skeletons, showError, speakButton, toast, reveal } from '../lib/ui.js';
 
 const roleLabel = (p) => (p.role === 'parent' ? t('parent_of', { child: p.child.split(' ')[0] }) : t(`role_${p.role}`));
 
@@ -20,13 +20,14 @@ function personaList(after) {
   const box = h('div', { class: 'stack' }, skeletons(3));
   api('/demo/personas').then(({ personas }) => {
     box.textContent = '';
+    reveal(box);
     const row = (p) => h('button', {
       type: 'button', class: 'item',
       onclick: () => actAs(p).then(after).catch(showError),
     }, avatar(p.name), h('span', { class: 'grow' }, h('strong', {}, p.name), h('span', { class: 'muted small' }, roleLabel(p))),
     icon('caret-right', { flip: true }));
     for (const [key, group] of [['family_signin', personas.filter((p) => p.role !== 'admin')], ['school_signin', personas.filter((p) => p.role === 'admin')]]) {
-      add(box, h('h3', {}, t(key)), h('div', { class: 'list' }, group.map(row)));
+      add(box, h('h3', { class: 'muted' }, t(key)), h('div', { class: 'list' }, group.map(row)));
     }
   }).catch((error) => {
     box.textContent = '';
@@ -75,9 +76,13 @@ export function demoSheet() {
 }
 
 const doorway = (href, glyph, title, detail) =>
-  h('a', { class: 'item doorway', href }, h('span', { class: 'avatar' }, icon(glyph, { size: 28 })),
+  h('a', { class: 'item doorway', href }, h('span', { class: 'lead' }, icon(glyph)),
     h('span', { class: 'grow' }, h('strong', {}, t(title)), h('span', { class: 'muted small' }, t(detail))),
     icon('caret-right', { flip: true }));
+
+const voiceMark = () =>
+  h('div', { class: 'voice-mark', 'aria-hidden': 'true' },
+    [12, 22, 34, 22, 40, 26, 16, 30, 12].map((height, i) => h('i', { style: `--h:${height};--n:${i}` })));
 
 export async function home(ctx) {
   if (signedIn()) return navigate(homeFor(), { replace: true });
@@ -85,24 +90,27 @@ export async function home(ctx) {
   // A fresh install that is not a demo goes straight to the first-run wizard.
   if (setupNeeded && !demoMode) return navigate('/setup', { replace: true });
 
+  reveal(ctx.root);
   add(ctx.root,
-    h('div', { class: 'welcome' }, h('h1', {}, t('app_tagline')), h('p', { class: 'muted' }, t('app_subtitle'))),
-    guide('hand-tap', 'home_guide'),
+    h('div', { class: 'masthead' }, voiceMark(), h('h1', {}, t('app_tagline')), h('p', {}, t('app_subtitle'))),
     h('div', { class: 'actions' },
       button(t('scan_qr'), { iconName: 'qr-code', kind: 'primary big block', href: '/scan' })),
-    h('section', { class: 'stack', 'aria-labelledby': 'signin-title' },
-      h('h2', { id: 'signin-title' }, t('sign_in')),
-      doorway('/login', 'users', 'family_signin', 'family_signin_detail'),
-      doorway('/school/login', 'chalkboard-teacher', 'school_signin', 'school_signin_detail')),
+    h('section', { class: 'section', 'aria-labelledby': 'signin-title' },
+      h('div', { class: 'row' }, h('h2', { class: 'grow', id: 'signin-title' }, t('sign_in')),
+        speakButton(t('home_guide'), languageOf('home_guide'))),
+      h('div', { class: 'list' },
+        doorway('/login', 'users', 'family_signin', 'family_signin_detail'),
+        doorway('/school/login', 'chalkboard-teacher', 'school_signin', 'school_signin_detail'))),
     installCard({ onLeave: ctx.onLeave }),
-    demoMode && h('section', { class: 'stack', 'aria-labelledby': 'demo-title' },
+    demoMode && h('section', { class: 'section', 'aria-labelledby': 'demo-title' },
       h('div', { class: 'row' }, h('h2', { class: 'grow', id: 'demo-title' }, t('demo_try')), speakButton(t('demo_try_help'), languageOf('demo_try_help'))),
       h('p', { class: 'muted' }, t('demo_try_help')),
       personaList(),
+      h('p', { class: 'muted small' }, t('demo_privacy')),
       button(t('demo_simulate'), { iconName: 'qr-code', kind: 'outline block', onClick: simulateScan })),
     setupNeeded && h('div', { class: 'card' }, h('h2', {}, t('setup_title')), h('p', {}, t('setup_help')),
       button(t('setup_start'), { iconName: 'chalkboard-teacher', kind: 'outline block', href: '/setup' })),
-    button(t('help_title'), { iconName: 'info', kind: 'block', href: '/help' }));
+    button(t('help_title'), { iconName: 'info', kind: 'quiet block', href: '/help' }));
 }
 
 const BROWSERS = [
@@ -119,7 +127,7 @@ export function help(ctx) {
     BROWSERS.map(([name, ...steps], index) =>
       h('details', { class: 'card', open: index === 0 },
         h('summary', {}, h('strong', {}, t(name))),
-        h('ol', { class: 'list' }, [...steps, ['microphone', 'help_allow_mic'], ['camera', 'help_allow_camera'], ['arrows-clockwise', 'help_reload']]
+        h('ol', { class: 'steps' }, [...steps, ['microphone', 'help_allow_mic'], ['camera', 'help_allow_camera'], ['arrows-clockwise', 'help_reload']]
           .map(([glyph, key]) => h('li', { class: 'guide' }, icon(glyph), h('p', {}, t(key)), speakButton(t(key), languageOf(key))))))),
     button(t('back_home'), { iconName: 'house', kind: 'primary block', onClick: () => navigate(homeFor()) }));
 }

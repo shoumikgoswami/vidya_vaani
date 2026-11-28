@@ -43,7 +43,7 @@ function steps() {
     ? [['export', 'install_ios_share'], ['plus-square', 'install_ios_add'], ['check', 'install_ios_confirm']]
     : [['dots-three-vertical', 'install_menu_open'], ['device-mobile', 'install_menu_choose'], ['check', 'install_menu_confirm']];
   sheet(t('install_title'), (close) => [
-    h('ol', { class: 'list steps' }, list.map(([glyph, key]) =>
+    h('ol', { class: 'steps' }, list.map(([glyph, key]) =>
       h('li', { class: 'guide' }, icon(glyph), h('p', {}, t(key)), speakButton(t(key), languageOf(key))))),
     h('p', { class: 'muted small' }, t('install_inapp')),
     button(t('done'), { kind: 'primary big block', onClick: close }),

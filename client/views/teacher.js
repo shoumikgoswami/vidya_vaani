@@ -1,4 +1,4 @@
-// S7 class dashboard, S8 voice inbox, adding students (J2) and S15 sticker sheets.
+// S7 class dashboard, S8 voice inbox and adding students (J2).
 import { h, add, icon, replace } from '../lib/dom.js';
 import { api, post, patch, del } from '../lib/api.js';
 import { t, languageOf, formatDate, childCount } from '../lib/i18n.js';
@@ -7,7 +7,7 @@ import * as outbox from '../lib/outbox.js';
 import { store, navigate, membershipFor, speakLanguage, adminSchoolId } from '../lib/state.js';
 import {
   guide, button, sheet, confirmSheet, skeletons, failure, showError, toast, notice, empty, avatar, field, form, segmented,
-  tagChip, player,
+  tagChip, player, reveal,
 } from '../lib/ui.js';
 import { installCard } from '../lib/install.js';
 import { voiceReply } from './reply.js';
@@ -23,6 +23,7 @@ async function load(ctx, path, draw) {
     const data = await api(path);
     if (!ctx.alive()) return;
     holder.textContent = '';
+    reveal(holder);
     draw(data, holder);
   } catch (error) {
     if (ctx.alive()) replace(holder, failure(error, reload));
@@ -31,7 +32,7 @@ async function load(ctx, path, draw) {
 
 const noteRow = (note) =>
   h('li', {}, h('a', { class: 'item', href: note.publishedAt ? `/t/note/${note.id}` : `/t/confirm/${note.id}` },
-    icon(note.publishedAt ? 'play' : 'clock', { size: 28 }),
+    h('span', { class: 'lead' }, icon(note.publishedAt ? 'play' : 'clock', { weight: note.publishedAt ? 'fill' : 'bold' })),
     h('span', { class: 'grow' },
       h('strong', { dir: 'auto' }, note.text ? `${note.text.slice(0, 60)}${note.text.length > 60 ? '…' : ''}` : t('listen_only')),
       h('span', { class: 'muted small' }, [
@@ -59,15 +60,15 @@ export function teacherHome(ctx) {
   const drafts = h('div', {});
   add(ctx.root, drafts);
   api('/drafts').then((data) => {
-    if (data.drafts.length) replace(drafts, h('section', { class: 'stack' }, h('h2', {}, t('not_saved_yet')), h('ul', { class: 'list' }, data.drafts.map(noteRow))));
+    if (data.drafts.length) replace(drafts, h('section', { class: 'section' }, h('h2', {}, t('not_saved_yet')), h('ul', { class: 'list' }, data.drafts.map(noteRow))));
   }).catch(() => {});
 
   add(ctx.root, h('h2', {}, t('my_classes')));
   return load(ctx, `/classes?school=${teacher.schoolId}`, ({ classes }, box) => {
     const mine = classes.filter((c) => c.teaches);
     if (!mine.length) return add(box, empty('chalkboard-teacher', 'no_classes'), installCard({ onLeave: ctx.onLeave }));
-    add(box, h('ul', { class: 'list' }, mine.map((c) => h('li', {}, h('a', { class: 'item', href: `/t/class/${c.id}` },
-      h('span', { class: 'avatar' }, `${c.name}${c.section}`),
+    add(box, h('ul', { class: 'list cols' }, mine.map((c) => h('li', {}, h('a', { class: 'item doorway', href: `/t/class/${c.id}` },
+      h('span', { class: 'avatar square' }, `${c.name}${c.section}`),
       h('span', { class: 'grow' }, h('strong', {}, `${t('class')} ${c.name}${c.section}`),
         h('span', { class: 'muted small' }, `${childCount(c.students)} · ${c.academicYear}`),
         c.pending > 0 && h('span', { class: 'pill-warn' }, t('n_requests', { n: c.pending }))),
@@ -79,7 +80,6 @@ export function teacherHome(ctx) {
 
 function studentSheet(data, student) {
   const classId = data.class.id;
-  const perStudent = data.school.qrMode === 'per_student';
   sheet(student.name, (close) => {
     const go = (path) => () => {
       close();
@@ -89,9 +89,9 @@ function studentSheet(data, student) {
       h('p', { class: 'muted' }, [student.rollNo && `${t('roll_no')} ${student.rollNo}`, student.parentPhone, student.parentEmail,
         t(student.guardians ? 'parent_linked' : 'no_parent_linked')].filter(Boolean).join(' · ')),
       data.class.teaches && button(t('record_note'), { iconName: 'microphone', kind: 'primary big block', onClick: go(`/t/record?class=${classId}&student=${student.id}`) }),
-      perStudent && h('img', { class: 'qr-preview', src: `/api/qr/${student.token}.svg`, alt: t('qr_of', { name: student.name }) }),
+      h('img', { class: 'qr-preview', src: `/api/qr/${student.token}.svg`, alt: t('qr_of', { name: student.name }) }),
       button(t('edit_details'), { iconName: 'pencil-simple', kind: 'outline block', onClick: () => { close(); editStudent(student); } }),
-      perStudent && button(t('new_qr'), {
+      button(t('new_qr'), {
         iconName: 'arrows-clockwise', kind: 'outline block',
         onClick: async () => {
           if (!(await confirmSheet(t('new_qr'), t('new_qr_confirm', { name: student.name }), t('new_qr')))) return;
@@ -138,26 +138,31 @@ export function classView(ctx) {
       await post(`/approvals/${linkId}`, { action });
       reload();
     };
-    add(box,
-      h('div', {}, h('h1', {}, `${t('class')} ${name}`), h('p', { class: 'muted' }, `${childCount(students.length)} · ${cls.academicYear}`)),
+    const actions = [
       cls.teaches && button(t('note_whole_class'), { iconName: 'microphone', kind: 'primary big block', href: `/t/record?class=${id}` }),
       h('div', { class: 'pair' },
         button(t('add_students'), { iconName: 'plus', kind: 'outline', href: `/t/class/${id}/add` }),
-        button(t('print_stickers'), { iconName: 'printer', kind: 'outline', href: `/t/stickers/${id}` })),
-      approvals.length > 0 && h('section', { class: 'stack' }, h('h2', {}, t('approvals')),
-        approvals.map((a) => h('div', { class: 'card' },
-          h('p', {}, t('approval_ask', { parent: a.parentName || a.phone || a.email, relation: t(['mother', 'father'].includes(a.relation) ? a.relation : 'other_relative'), child: a.studentName })),
-          h('p', { class: 'muted small' }, [a.phone, a.email].filter(Boolean).join(' · ')),
-          h('div', { class: 'pair' },
-            button(t('approve'), { iconName: 'check', kind: 'primary', onClick: decide(a.linkId, 'approve') }),
-            button(t('reject'), { iconName: 'x', kind: 'outline', onClick: decide(a.linkId, 'reject') }))))),
-      students.length
-        ? h('div', { class: 'grid' }, students.map((s) => h('button', { type: 'button', class: 'tile', onclick: () => studentSheet(data, s) },
-          avatar(s.name), h('strong', {}, s.name),
-          h('span', { class: 'muted small' }, t(s.guardians ? 'parent_linked' : 'no_parent_linked')))))
-        : empty('student', 'class_empty', button(t('add_students'), { kind: 'primary', href: `/t/class/${id}/add` })),
-      notes.length > 0 && h('section', { class: 'stack' }, h('h2', {}, t('recent_notes')), h('ul', { class: 'list' }, notes.map(noteRow))),
-      school.qrMode === 'per_school' && notice('qr-code', [h('p', {}, t('school_qr_mode_note'))]));
+        button(t('print_stickers'), { iconName: 'qr-code', kind: 'outline', href: `/t/stickers/${id}` })),
+    ];
+    const requests = approvals.length > 0 && h('section', { class: 'section' }, h('h2', {}, t('approvals')),
+      approvals.map((a) => h('div', { class: 'card' },
+        h('p', {}, t('approval_ask', { parent: a.parentName || a.phone || a.email, relation: t(['mother', 'father'].includes(a.relation) ? a.relation : 'other_relative'), child: a.studentName })),
+        h('p', { class: 'muted small' }, [a.phone, a.email].filter(Boolean).join(' · ')),
+        h('div', { class: 'pair' },
+          button(t('approve'), { iconName: 'check', kind: 'primary', onClick: decide(a.linkId, 'approve') }),
+          button(t('reject'), { iconName: 'x', kind: 'outline', onClick: decide(a.linkId, 'reject') })))));
+    const children = students.length
+      ? h('div', { class: 'grid' }, students.map((s) => h('button', { type: 'button', class: 'tile', onclick: () => studentSheet(data, s) },
+        avatar(s.name), h('strong', {}, s.name),
+        h('span', { class: 'muted small' }, t(s.guardians ? 'parent_linked' : 'no_parent_linked')))))
+      : empty('student', 'class_empty', button(t('add_students'), { kind: 'primary', href: `/t/class/${id}/add` }));
+    add(box,
+      h('div', { class: 'page-head' }, h('h1', {}, `${t('class')} ${name}`), h('p', { class: 'muted' }, `${childCount(students.length)} · ${cls.academicYear}`)),
+      h('div', { class: 'split' },
+        h('div', { class: 'split-col' }, actions, requests,
+          school.qrMode === 'per_school' && notice('qr-code', [h('p', {}, t('school_qr_mode_note'))]),
+          notes.length > 0 && h('section', { class: 'section' }, h('h2', {}, t('recent_notes')), h('ul', { class: 'list' }, notes.map(noteRow)))),
+        h('div', { class: 'split-col' }, children)));
   });
 }
 
@@ -259,45 +264,6 @@ export function addStudents(ctx) {
     added, area,
     button(t('back_to_class'), { iconName: 'arrow-left', kind: 'block', href: `/t/class/${id}` }));
   modes[mode]();
-}
-
-/* ---------- Stickers ---------- */
-
-export const qrImage = (svg, alt) => h('img', { src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`, alt });
-
-export function schoolPoster(data) {
-  return h('div', { class: 'poster' }, h('h1', {}, data.school.name), qrImage(data.svg, 'QR'),
-    h('h2', {}, 'Vidya Vaani'), h('p', {}, t('poster_line')));
-}
-
-export function stickers(ctx) {
-  const id = Number(ctx.params.id);
-  return load(ctx, `/classes/${id}/stickers`, async (data, box) => {
-    if (data.school.qrMode === 'per_school') {
-      const school = await api(`/school-qr?school=${data.school.id}`);
-      return add(box, h('div', { class: 'no-print stack' }, h('h1', {}, t('school_qr')), guide('printer', 'print_guide'),
-        button(t('print_or_pdf'), { iconName: 'printer', kind: 'primary big block', onClick: () => window.print() })), schoolPoster(school));
-    }
-    let perPage = 12;
-    const sheets = h('div', { class: 'stack' });
-    const draw = () => {
-      const pages = [];
-      for (let i = 0; i < data.students.length; i += perPage) pages.push(data.students.slice(i, i + perPage));
-      replace(sheets, pages.map((page) => h('div', { class: `sheet-page per-${perPage}` }, page.map((s) =>
-        h('div', { class: 'sticker' }, qrImage(s.svg, ''), h('b', {}, s.name),
-          h('span', {}, `${t('class')} ${data.className}${s.rollNo ? ` · ${s.rollNo}` : ''}`),
-          h('span', {}, data.school.name),
-          h('span', { class: 'row' }, h('img', { src: '/img/icon.svg', alt: '', class: 'logo-dot' }), 'Vidya Vaani'))))));
-    };
-    draw();
-    add(box,
-      h('div', { class: 'no-print stack' },
-        h('h1', {}, `${t('print_stickers')} ${data.className}`),
-        guide('printer', 'print_guide'),
-        segmented([[12, t('per_page', { n: 12 })], [24, t('per_page', { n: 24 })]], perPage, (n) => { perPage = n; draw(); }),
-        button(t('print_or_pdf'), { iconName: 'printer', kind: 'primary big block', onClick: () => window.print() })),
-      data.students.length ? sheets : empty('student', 'class_empty'));
-  });
 }
 
 /* ---------- Voice inbox ---------- */

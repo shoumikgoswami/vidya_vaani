@@ -12,9 +12,9 @@ import {
 import { pickFromList } from './scan.js';
 
 function waveform() {
-  const canvas = h('canvas', { class: 'wave', width: 600, height: 56, 'aria-hidden': 'true' });
+  const canvas = h('canvas', { class: 'wave', width: 600, height: 64, 'aria-hidden': 'true' });
   const context = canvas.getContext('2d');
-  const levels = new Array(100).fill(0);
+  const levels = new Array(40).fill(0);
   return {
     canvas,
     push(level) {
@@ -23,8 +23,13 @@ function waveform() {
       context.clearRect(0, 0, canvas.width, canvas.height);
       context.fillStyle = getComputedStyle(canvas).color;
       levels.forEach((v, i) => {
-        const height = Math.max(3, v * canvas.height);
-        context.fillRect(i * 6, (canvas.height - height) / 2, 3, height);
+        const height = Math.max(5, v * canvas.height);
+        // The newest sound is brightest.
+        context.globalAlpha = 0.3 + (0.7 * i) / levels.length;
+        context.beginPath();
+        if (context.roundRect) context.roundRect(i * 15 + 3, (canvas.height - height) / 2, 9, height, 5);
+        else context.rect(i * 15 + 3, (canvas.height - height) / 2, 9, height);
+        context.fill();
       });
     },
   };

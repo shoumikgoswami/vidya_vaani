@@ -36,7 +36,7 @@ export function words(note, { onRetry } = {}) {
         : notice('translate', [h('p', {}, t('translation_unavailable')),
           onRetry && button(t('try_again'), { iconName: 'arrows-clockwise', kind: 'outline small', onClick: onRetry })], 'warn')),
       text
-        ? h('div', { class: 'row', style: 'align-items:flex-start' },
+        ? h('div', { class: 'row top' },
           h('p', { class: 'note-text grow', lang: code, dir: 'auto' }, text), speakButton(text, code))
         : h('p', { class: 'muted' }, t(note.status === 'transcribing' || note.status === 'uploaded' ? 'processing' : 'listen_only')),
       showTranslation && translation.machineWarning && notice('warning', [h('p', {}, t('mt_warning'))], 'warn'),

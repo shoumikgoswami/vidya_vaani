@@ -18,7 +18,7 @@ export const CONSENT_POINTS = [
 export const consentText = () => CONSENT_POINTS.map(([, key]) => t(key)).join(' ');
 
 export const consentPoints = () =>
-  h('ul', { class: 'list' }, CONSENT_POINTS.map(([glyph, key]) => h('li', { class: 'guide' }, icon(glyph), h('p', {}, t(key)))));
+  h('ul', { class: 'steps' }, CONSENT_POINTS.map(([glyph, key]) => h('li', { class: 'guide' }, icon(glyph), h('p', {}, t(key)))));
 
 export function appExtras() {
   const box = h('div', { class: 'actions' });

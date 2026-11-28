@@ -120,7 +120,7 @@ function qrError(ctx, error) {
 /** A new parent: welcome read aloud, language tiles, then sign-in (J5). */
 function welcome(ctx, path, schoolName) {
   add(ctx.root,
-    h('div', { class: 'welcome' }, h('h1', {}, t('welcome_title')), schoolName && h('p', { class: 'muted' }, schoolName)),
+    h('div', { class: 'page-head' }, h('h1', {}, t('welcome_title')), schoolName && h('p', { class: 'muted' }, schoolName)),
     guide('translate', 'welcome_pick_language'),
     languageTiles(language(), (code) => chooseLanguage(code)),
     h('div', { class: 'sticky-actions' },
