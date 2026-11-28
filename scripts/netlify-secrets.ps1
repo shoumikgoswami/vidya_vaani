@@ -1,13 +1,32 @@
-# Sends this app's secrets to the linked Netlify site. Run it yourself, from the project folder:
-#   1. In Neon, copy the pooled connection string.
-#   2. powershell -ExecutionPolicy Bypass -File scripts\netlify-secrets.ps1
+# Sends this app's secrets to the linked Netlify site. Run it yourself:
+#   powershell -ExecutionPolicy Bypass -File scripts\netlify-secrets.ps1
+# then copy the pooled connection string in Neon. The script waits for it.
 # Takes the Clerk and AI keys from .env and the database address from the clipboard. Prints names only.
+param([int]$WaitSeconds = 300)
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path $PSScriptRoot -Parent)
 
-$address = [regex]::Match([string](Get-Clipboard -Raw), 'postgres(ql)?://[^\s''"]+').Value
-if (-not $address) { throw 'The clipboard holds no Postgres connection string. Copy it in Neon, then run this again.' }
-if ($address -match '\*\*\*') { throw 'The password is hidden in the copied text. Use the copy button in Neon, then run this again.' }
+function Find-Address {
+  $text = [string](Get-Clipboard -Raw -ErrorAction SilentlyContinue)
+  [regex]::Match($text, 'postgres(ql)?://[^\s''"]+').Value
+}
+
+$address = Find-Address
+if (-not $address) {
+  Write-Host 'Waiting: in Neon, press "Copy snippet" under the connection string. Nothing else to do here.'
+}
+$warned = $false
+$until = (Get-Date).AddSeconds($WaitSeconds)
+while (-not $address -or $address -match '\*\*\*') {
+  if ($address -and -not $warned) {
+    Write-Host 'That copy hides the password. In Neon press "Show password", then "Copy snippet" again.'
+    $warned = $true
+  }
+  if ((Get-Date) -gt $until) { throw 'No connection string was copied in time. Run the script again when you are ready.' }
+  Start-Sleep -Seconds 1
+  $address = Find-Address
+}
+Write-Host 'Got the connection string. Sending to Netlify...'
 if ($address -notmatch '-pooler\.') { Write-Warning 'This is not the pooled address. Turn on connection pooling in Neon if the app is slow to connect.' }
 
 $names = '^(CLERK_PUBLISHABLE_KEY|CLERK_SECRET_KEY|NVIDIA_API_KEY|OPENROUTER_API_KEY)=.'
