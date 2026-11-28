@@ -26,7 +26,7 @@
       "key": "hi-homework", "author": "meena", "class": "5A", "to": ["Ravi Kumar"], "lang": "hi", "hoursAgo": 2,
       "raw": "आज रवि ने class में बहुत अच्छा किया। कल Hindi की किताब के page 12 की कविता याद करनी है।",
       "say": "आज रवि ने क्लास में बहुत अच्छा किया। कल हिंदी की किताब के पेज बारह की कविता याद करनी है।",
-      "durationMs": 6602,
+      "durationMs": 5859,
       "clean": "आज रवि ने class में बहुत अच्छा किया। कल Hindi की किताब के page 12 की कविता याद करनी है।",
       "tags": [{ "type": "homework", "subject": "Hindi", "due": "+1" }],
       "translations": {
