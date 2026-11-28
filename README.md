@@ -165,6 +165,9 @@ npx netlify-cli env:set PUBLIC_BASE_URL https://diary.example.org
 npx netlify-cli deploy --build --prod
 ```
 
+On Windows, `scripts
+etlify-secrets.ps1` does the import in one step: copy the connection string in Neon, then run it. It takes the keys from `.env`.
+
 `PUBLIC_BASE_URL` is printed into the QR codes, so set it before printing stickers. The database tables and the sample school are created on first use. Functions:
 
 | Function | Work |
