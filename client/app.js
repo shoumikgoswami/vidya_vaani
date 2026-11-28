@@ -19,6 +19,7 @@ import { noteView } from './views/note.js';
 import { diary } from './views/parent.js';
 import { account } from './views/account.js';
 import { school, people, promote, reports } from './views/admin.js';
+import { configuration } from './views/config.js';
 
 // [pattern, view, options]
 const ROUTES = [
@@ -48,6 +49,7 @@ const ROUTES = [
   ['/admin/reports', reports, { auth: true, role: 'admin', wide: true }],
   ['/admin/school-qr', schoolQr, { auth: true, role: 'admin' }],
   ['/admin/stickers', allStickers, { auth: true, role: 'admin', wide: true }],
+  ['/admin/config', configuration, { auth: true, role: 'admin', wide: true }],
 ].map(([pattern, view, options = {}]) => ({
   view,
   options,
@@ -71,7 +73,7 @@ function drawBanner() {
   if (!navigator.onLine) parts.push(h('div', { class: 'banner offline' }, icon('wifi-slash', { size: 20 }), t('offline_banner')));
   if (store.config?.demoMode) {
     parts.push(h('div', { class: 'banner' },
-      h('span', {}, t(store.config.ai.nvidia ? 'demo_banner_ai' : 'demo_banner_no_ai')),
+      h('span', {}, t('demo_banner')),
       h('button', { type: 'button', onclick: demoSheet }, t('demo_switch'))));
   }
   replace($('banner'), parts);

@@ -56,8 +56,6 @@ export function simulateScan() {
 
 export function demoSheet() {
   sheet(t('demo_title'), (close) => [
-    h('p', { class: 'chip' }, icon(store.config.ai.nvidia ? 'check-circle' : 'info', { size: 20 }),
-      store.config.ai.nvidia ? t('ai_on') : t('ai_off')),
     h('h3', {}, t('demo_act_as')),
     personaList(close),
     button(t('demo_simulate'), { iconName: 'qr-code', kind: 'outline block', onClick: () => { close(); simulateScan(); } }),

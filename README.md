@@ -4,7 +4,7 @@ A voice-first school diary. The teacher scans the QR sticker on a child's paper 
 
 Live demo: **https://vidyavaani.shoumikgoswami.com** (a shared sample school that resets every night).
 
-Built for rural schools: big buttons, pictures and voice before text, works on a low-end Android phone over patchy 4G, and keeps recordings on the phone until the network returns.
+Built for rural schools: a light screen by default (dark is a choice under **Me**), big buttons, pictures and voice before text, works on a low-end Android phone over patchy 4G, and keeps recordings on the phone until the network returns.
 
 ## Start it
 
@@ -22,15 +22,15 @@ Docker Compose 2.24 or newer is required for the optional `.env` file. On older 
 
 Demo mode is on by default: a sample school, one-tap role switching and "simulate scan" in place of a printed sticker.
 
-1. On the home screen tap **Lakshmi Iyer** (a Tamil-speaking science teacher).
-2. Tap **Scan QR**, then **Simulate scan**, then **Ravi Kumar**. Speak a note in Tamil and tap **Save**. (No microphone? Use the sample notes already in Ravi's diary.)
+1. On the home screen tap **Lakshmi Iyer** (an English-speaking science teacher).
+2. Tap **Scan QR**, then **Simulate scan**, then **Ravi Kumar**. Speak a note in English and tap **Save**. (No microphone? Use the sample notes already in Ravi's diary.)
 3. Tap **Switch person** and choose **Sunita Devi**, Ravi's Hindi-speaking mother.
-4. Play the Tamil note. The Hindi translation is under the player.
+4. Play the English note. The Hindi translation is under the player. (Selvi, Padma and Bimal read in Tamil, Telugu and Bengali.)
 5. Tap **Reply by voice**.
 6. Switch back to Lakshmi: open the note to see "Heard by", and **Replies** for the voice reply.
-7. Switch to **Anita Rao** (admin) and open **School** to see what each language uses ("AI status by language").
+7. Switch to **Anita Rao** (admin), open **School**, then **Configuration** to see the keys in use, the models and what each language gets.
 
-Without an NVIDIA key, a note you record yourself keeps the browser's own live transcript where the browser has one (Chrome, Edge), and translation shows as unavailable. The sample notes carry stored transcripts and translations, so the cross-language flow always works. Sample audio is a computer voice unless real recordings are placed in `demo/sample-notes/`.
+Without an NVIDIA key, a note you record yourself keeps the browser's own live transcript where the browser has one (Chrome, Edge), and translation shows as unavailable. The sample notes carry stored transcripts and translations, so the cross-language flow always works. The sample school speaks Hindi and English, in NVIDIA's synthetic voice unless real recordings are placed in `demo/sample-notes/`.
 
 ## Two sign-ins
 
@@ -102,7 +102,7 @@ Every code carries the Vidya Vaani logo and colours, and a test reads each style
 
 - **Teachers:** scan a sticker, speak, check the card (words, uncertain words, tags, dates, numbers), save by tapping or saying "save". Whole-class and selected-student notes, listen receipts, reminders, a voice inbox.
 - **Parents:** hear the teacher, read a translation, see due dates, reply by voice, filter the diary, hear a weekly summary, get notifications and a reminder at 6 pm the day before a deadline.
-- **Admins:** school settings, teachers and classes, per-student or per-school QR, branded sticker sheets, year-end promotion, metrics, activity log, AI status by language.
+- **Admins:** a Configuration screen with every technical detail (nothing about keys or models shows anywhere else), school settings, teachers and classes, per-student or per-school QR, branded sticker sheets, year-end promotion, metrics, activity log, AI status by language.
 
 ## Language coverage, stated plainly
 

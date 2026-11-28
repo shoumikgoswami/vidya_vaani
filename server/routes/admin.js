@@ -6,7 +6,9 @@ import { parse, fail, intParam, normalizePhone, normalizeEmail, now, audit, pars
 import { requireUser } from '../auth/session.js';
 import { requireAdmin, membershipsFor } from '../auth/authorize.js';
 import { findOrCreateUser, userByPhone, userByEmail } from '../auth/users.js';
+import { otpLoginEnabled } from '../auth/otp.js';
 import { providerStatus } from '../providers/status.js';
+import { config } from '../config.js';
 import { todayIst, addDays } from '../nlp/dates.js';
 import { LANG_CODES } from '../../client/lib/languages.js';
 import { visibleClasses } from './teacher.js';
@@ -47,9 +49,20 @@ router.patch('/school', async (req, res) => {
   res.json(presentSchool(await get('SELECT * FROM school WHERE id = ?', school.id)));
 });
 
-router.get('/school/providers', async (req, res) => {
-  if (req.user.portal !== 'school' || !(await membershipsFor(req.user.id)).some((m) => m.role === 'admin')) fail(403, 'forbidden');
-  res.json(providerStatus());
+/** Everything technical, for the office's Configuration screen. Whether keys are set, never the keys. */
+router.get('/school/config', async (req, res) => {
+  const school = await adminSchool(req);
+  res.json({
+    ...providerStatus(),
+    ...await technicalFor(school.id),
+    system: {
+      signIn: config.clerk.enabled ? 'clerk' : otpLoginEnabled() ? 'demo' : 'none',
+      database: config.databaseUrl.startsWith('postgres') ? 'hosted' : 'builtin',
+      publicBaseUrl: config.publicBaseUrl,
+      demoMode: config.demoMode,
+      demoAiDailyLimit: config.demoAiDailyLimit,
+    },
+  });
 });
 
 /* ---------- Teachers ---------- */
@@ -282,14 +295,6 @@ export async function metricsFor(schoolId) {
   )).filter((r) => r.due < todayIst());
   const beforeDue = deadlines.filter((r) => r.heard && r.heard.slice(0, 10) <= r.due);
 
-  const quality = (await all(
-    `SELECT COALESCE(transcript_lang, lang_hint, 'unknown') AS lang, COUNT(*) AS notes,
-       SUM(CASE WHEN transcript_conf IS NOT NULL AND transcript_conf < 0.7 THEN 1 ELSE 0 END) AS "lowConfidence",
-       SUM(edited) AS edited
-     FROM note WHERE school_id = ? AND kind = 'teacher_note' GROUP BY 1 ORDER BY notes DESC`,
-    schoolId,
-  )).map((q) => ({ lang: q.lang, notes: q.notes, lowPercent: percent(q.lowConfidence, q.notes), editedPercent: percent(q.edited, q.notes) }));
-
   return {
     notes: notes.length,
     heardIn24h: { percent: percent(heardFast.length, old.length), of: old.length, target: 70 },
@@ -297,15 +302,28 @@ export async function metricsFor(schoolId) {
     activeTeachers: { percent: percent(activeTeachers.length, teachers.length), of: teachers.length, target: 80 },
     parentsReplied: { percent: percent(repliers, parents), of: parents, target: 30 },
     heardBeforeDue: { percent: percent(beforeDue.length, deadlines.length), of: deadlines.length },
-    quality,
-    aiUsage: await all('SELECT day, model, calls, errors_429 AS errors429, errors_other AS "errorsOther" FROM ai_usage WHERE day >= ? ORDER BY day DESC, model',
-      addDays(todayIst(), -6)),
     outcomes: await all(
       `SELECT o.period, o.homework_done_pct AS "homeworkDonePct", o.fee_missed_count AS "feeMissedCount", c.name || c.section AS "className"
        FROM outcome o LEFT JOIN class c ON c.id = o.class_id WHERE o.school_id = ? ORDER BY o.created_at DESC LIMIT 30`,
       schoolId,
     ),
   };
+}
+
+/** How well the speech and language services are doing. */
+async function technicalFor(schoolId) {
+  const quality = (await all(
+    `SELECT COALESCE(transcript_lang, lang_hint, 'unknown') AS lang, COUNT(*) AS notes,
+       SUM(CASE WHEN transcript_conf IS NOT NULL AND transcript_conf < 0.7 THEN 1 ELSE 0 END) AS "lowConfidence",
+       SUM(edited) AS edited
+     FROM note WHERE school_id = ? AND kind = 'teacher_note' GROUP BY 1 ORDER BY notes DESC`,
+    schoolId,
+  )).map((q) => ({ lang: q.lang, notes: q.notes, lowPercent: percent(q.lowConfidence, q.notes), editedPercent: percent(q.edited, q.notes) }));
+  const aiUsage = await all(
+    'SELECT day, model, calls, errors_429 AS "errors429", errors_other AS "errorsOther" FROM ai_usage WHERE day >= ? ORDER BY day DESC, model',
+    addDays(todayIst(), -6),
+  );
+  return { quality, aiUsage };
 }
 
 router.get('/metrics', async (req, res) => {

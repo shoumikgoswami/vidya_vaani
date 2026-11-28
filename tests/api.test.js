@@ -77,13 +77,13 @@ test('a parent cannot open another child\'s note, audio or diary by id', async (
   assert.equal((await app.client().get(`/api/notes/${ids.otherNote}`)).status, 401);
 });
 
-test('cross-language sample: Tamil audio with a Hindi translation', async () => {
+test('cross-language sample: English audio with a Hindi translation', async () => {
   const diary = (await sunita.get(`/api/children/${ids.ravi}/notes`)).data;
   assert.equal(diary.readLang, 'hi');
-  const tamil = diary.notes.find((n) => n.lang === 'ta' && n.tags.some((t) => t.type === 'homework'));
-  assert.ok(tamil.translated);
-  assert.match(tamil.shown, /24/);
-  const audio = await sunita.get(tamil.audioUrl);
+  const english = diary.notes.find((n) => n.lang === 'en' && n.tags.some((t) => t.type === 'homework'));
+  assert.ok(english.translated);
+  assert.match(english.shown, /24/);
+  const audio = await sunita.get(english.audioUrl);
   assert.equal(audio.status, 200);
   assert.ok(audio.data.length > 500);
 });
@@ -340,9 +340,17 @@ test('the school office has its own sign-in', async () => {
   assert.equal(blocked.status, 403);
   assert.equal(blocked.data.error, 'school_sign_in_needed');
   assert.equal((await wrongDoor.get(`/api/classes/${ids.class7}`)).status, 403);
-  assert.equal((await wrongDoor.get('/api/school/providers')).status, 403);
+  assert.equal((await wrongDoor.get(`/api/school/config?school=${ids.school}`)).status, 403);
 
   const office = await app.client().login(DEMO.admin, 'school');
+  const technical = (await office.get(`/api/school/config?school=${ids.school}`)).data;
+  assert.equal(technical.system.database, 'builtin');
+  assert.ok(Array.isArray(technical.aiUsage) && Array.isArray(technical.quality));
+  // The figures teachers can read carry nothing technical.
+  const teacher = await app.client().login(DEMO.meena);
+  const figures = (await teacher.get(`/api/metrics?school=${ids.school}`)).data;
+  assert.ok(!('aiUsage' in figures) && !('quality' in figures));
+  assert.equal((await teacher.get(`/api/school/config?school=${ids.school}`)).status, 403);
   assert.equal((await office.get('/api/me')).data.portal, 'school');
   assert.equal((await office.get(`/api/school?school=${ids.school}`)).status, 200);
 });

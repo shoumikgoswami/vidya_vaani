@@ -1,8 +1,8 @@
 # Real sample recordings (optional)
 
-Put real recordings here to replace the computer voice in the demo. Use WebM/Opus, named after the sample:
+Put real recordings here to replace the synthetic voices in the demo. Use WebM/Opus, named after the sample:
 
-`hi-homework.webm`, `hi-fee.webm`, `ta-science.webm`, `ta-meeting.webm`, `bn-exam.webm`, `or-uniform.webm`, `hi-reply.webm`
+`hi-homework.webm`, `hi-fee.webm`, `en-science.webm`, `en-meeting.webm`, `hi-exam.webm`, `hi-uniform.webm`, `hi-reply.webm`
 
 The words to read are the `raw` field of each entry in `../sample-data.json`. To convert a phone recording:
 

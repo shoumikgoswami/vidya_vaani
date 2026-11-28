@@ -72,7 +72,7 @@ for (const target of chain) {
 lines.push('', '## Speech', '', '| Check | Result |', '|---|---|');
 if (config.nvidia.apiKey) {
   const dir = path.join(ROOT, 'demo', 'audio');
-  const clips = [['hi-homework', 'hi'], ['bn-exam', 'bn'], ['ta-science', 'ta'], ['or-uniform', 'te'], ['hi-fee', 'mr'], ['hi-homework', 'auto']];
+  const clips = [['hi-homework', 'hi'], ['en-science', 'en'], ['en-meeting', 'en'], ['hi-fee', 'mr'], ['hi-homework', 'auto']];
   for (const [clip, code] of clips) {
     const file = path.join(dir, `${clip}.webm`);
     if (!fs.existsSync(file)) {
@@ -89,7 +89,7 @@ if (config.nvidia.apiKey) {
   for (const [code, text] of [['hi', 'हो गया। नोट सेव हो गया।'], ['en', 'Done. The note is saved.']]) {
     lines.push(`| Magpie voice ${code} | ${(await synthesize(text, code)) ? 'audio returned' : 'FAILED'} |`);
   }
-  lines.push('', 'Demo clips are computer voices. Repeat with real recordings in demo/sample-notes/ before trusting accuracy.');
+  lines.push('', 'Demo clips are synthetic voices. Repeat with real recordings in demo/sample-notes/ before trusting accuracy.');
 } else {
   lines.push('| NVIDIA speech | skipped, NVIDIA_API_KEY not set |');
 }

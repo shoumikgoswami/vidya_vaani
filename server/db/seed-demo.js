@@ -30,7 +30,7 @@ function dueDate(spec) {
 const ago = (hours) => new Date(Date.now() - hours * 3_600_000).toISOString();
 
 /**
- * Real recordings in demo/sample-notes/<key>.webm win over the computer voice in demo/audio
+ * Real recordings in demo/sample-notes/<key>.webm win over the synthetic voices in demo/audio
  * (made once by scripts/make-demo-audio.js).
  */
 function sampleAudio(key) {
@@ -108,7 +108,7 @@ async function seedRows() {
     const created = ago(sample.hoursAgo);
     const id = await insert('note', {
       school_id: schoolId, class_id: classId, author_user_id: users[sample.author], kind, parent_note_id: parentNoteId,
-      audio_mime: 'audio/webm', duration_ms: Math.max(3000, sample.raw.length * 75), lang_hint: sample.lang,
+      audio_mime: 'audio/webm', duration_ms: sample.durationMs || Math.max(3000, sample.raw.length * 75), lang_hint: sample.lang,
       transcript_raw: sample.audioOnly ? null : sample.raw,
       transcript_clean: sample.audioOnly ? null : sample.clean || null,
       transcript_lang: sample.lang, tier: lang(sample.lang).tier,

@@ -190,15 +190,8 @@ export async function confirm(ctx) {
     if (mismatch) alerts.push(notice('warning', [h('p', {}, t('mismatch_warning'))], 'warn'));
     if (note.flags.lowConfidence) alerts.push(notice('warning', [h('p', {}, t('low_confidence'))], 'warn'));
     if (approximate) alerts.push(notice('info', [h('p', {}, t('approximate_transcript'))], 'warn'));
-    if (note.status === 'audio_only') {
-      alerts.push(notice('info', [h('p', {}, t(note.flags.keyMissing ? 'audio_only_key' : 'audio_only'))]));
-    }
-    if (note.status === 'transcript_failed') {
-      alerts.push(notice('hourglass', [h('p', {}, t(note.flags.keyMissing ? 'key_not_set' : 'transcript_pending'))], 'warn'));
-    }
-    if (note.status === 'ready' && note.transcript.provider === 'browser') {
-      alerts.push(notice('info', [h('p', {}, t(note.flags.keyMissing ? 'browser_transcript_key' : 'browser_transcript'))]));
-    }
+    if (note.status === 'audio_only') alerts.push(notice('info', [h('p', {}, t('audio_only'))]));
+    if (note.status === 'transcript_failed') alerts.push(notice('hourglass', [h('p', {}, t('transcript_pending'))], 'warn'));
     replace(warnings, alerts);
 
     const ambiguity = note.ambiguities[0];

@@ -3,8 +3,8 @@
   "people": [
     { "key": "admin", "phone": "+919900000001", "name": "Anita Rao", "role": "admin", "lang": "hi" },
     { "key": "meena", "phone": "+919900000002", "name": "Meena Kumari", "role": "teacher", "lang": "hi", "subjects": ["Hindi", "Maths"] },
-    { "key": "lakshmi", "phone": "+919900000003", "name": "Lakshmi Iyer", "role": "teacher", "lang": "ta", "subjects": ["Science"] },
-    { "key": "arjun", "phone": "+919900000004", "name": "Arjun Chatterjee", "role": "teacher", "lang": "bn", "subjects": ["Maths", "Bengali"] },
+    { "key": "lakshmi", "phone": "+919900000003", "name": "Lakshmi Iyer", "role": "teacher", "lang": "en", "subjects": ["Science"] },
+    { "key": "arjun", "phone": "+919900000004", "name": "Arjun Chatterjee", "role": "teacher", "lang": "hi", "subjects": ["Maths", "Bengali"] },
     { "key": "sunita", "phone": "+919900000011", "name": "Sunita Devi", "role": "parent", "lang": "hi", "child": "Ravi Kumar" },
     { "key": "padma", "phone": "+919900000012", "name": "Padma Reddy", "role": "parent", "lang": "te", "child": "Kavya Reddy" },
     { "key": "selvi", "phone": "+919900000013", "name": "Selvi Murugan", "role": "parent", "lang": "ta", "child": "Sneha Murugan" },
@@ -25,6 +25,8 @@
     {
       "key": "hi-homework", "author": "meena", "class": "5A", "to": ["Ravi Kumar"], "lang": "hi", "hoursAgo": 2,
       "raw": "उम्म, आज रवि ने class में बहुत अच्छा किया। और, कल Hindi की किताब के page 12 की कविता याद करनी है।",
+      "say": "उम्म, आज रवि ने क्लास में बहुत अच्छा किया। और, कल हिंदी की किताब के पेज बारह की कविता याद करनी है।",
+      "durationMs": 6602,
       "clean": "आज रवि ने class में बहुत अच्छा किया। कल Hindi की किताब के page 12 की कविता याद करनी है।",
       "tags": [{ "type": "homework", "subject": "Hindi", "due": "+1" }],
       "translations": {
@@ -36,6 +38,8 @@
     {
       "key": "hi-fee", "author": "meena", "class": "5A", "to": "class", "lang": "hi", "hoursAgo": 26,
       "raw": "सभी बच्चे शुक्रवार तक 500 रुपये exam fees जमा कर दें।",
+      "say": "सभी बच्चे शुक्रवार तक पाँच सौ रुपये एग्ज़ाम फीस जमा कर दें।",
+      "durationMs": 3908,
       "clean": "सभी बच्चे शुक्रवार तक 500 रुपये exam fees जमा कर दें।",
       "tags": [{ "type": "fee", "due": "fri" }],
       "heardBy": ["sunita", "selvi"],
@@ -47,47 +51,54 @@
       }
     },
     {
-      "key": "ta-science", "author": "lakshmi", "class": "5A", "to": ["Ravi Kumar"], "lang": "ta", "hoursAgo": 1,
-      "raw": "ரவி, நாளைக்கு Science homework, பக்கம் 24 கேள்விகளை எழுதி வர வேண்டும்.",
-      "clean": "ரவி, நாளைக்கு Science homework: பக்கம் 24 கேள்விகளை எழுதி வர வேண்டும்.",
+      "key": "en-science", "author": "lakshmi", "class": "5A", "to": ["Ravi Kumar"], "lang": "en", "hoursAgo": 1,
+      "raw": "Ravi, for your Science homework tomorrow, please write the answers to the questions on page 24.",
+      "clean": "Ravi, for your Science homework tomorrow, please write the answers to the questions on page 24.",
+      "durationMs": 8552,
       "tags": [{ "type": "homework", "subject": "Science", "due": "+1" }],
       "translations": {
         "hi": "रवि को कल के लिए Science का homework है: page 24 के सवाल लिखकर लाने हैं।",
-        "en": "Ravi has Science homework for tomorrow: write the answers to the questions on page 24.",
+        "ta": "ரவி, நாளைக்கு Science homework: பக்கம் 24 கேள்விகளை எழுதி வர வேண்டும்.",
         "te": "రవికి రేపటికి Science homework: page 24 లోని ప్రశ్నలు రాసుకుని రావాలి."
       }
     },
     {
-      "key": "ta-meeting", "author": "lakshmi", "class": "5A", "to": "class", "lang": "ta", "hoursAgo": 50,
-      "raw": "சனிக்கிழமை காலை 10 மணிக்கு பெற்றோர் கூட்டம் உள்ளது. அனைவரும் வர வேண்டும்.",
-      "clean": "சனிக்கிழமை காலை 10 மணிக்கு பெற்றோர் கூட்டம் உள்ளது. அனைவரும் வர வேண்டும்.",
+      "key": "en-meeting", "author": "lakshmi", "class": "5A", "to": "class", "lang": "en", "hoursAgo": 50,
+      "raw": "There is a parents' meeting on Saturday at 10 in the morning. Everyone should come.",
+      "clean": "There is a parents' meeting on Saturday at 10 in the morning. Everyone should come.",
+      "durationMs": 7438,
       "tags": [{ "type": "event", "due": "sat" }],
       "heardBy": ["sunita"],
       "translations": {
         "hi": "शनिवार सुबह 10 बजे parents meeting है। सभी को आना है।",
-        "en": "There is a parents' meeting on Saturday at 10 in the morning. Everyone should come.",
+        "ta": "சனிக்கிழமை காலை 10 மணிக்கு பெற்றோர் கூட்டம் உள்ளது. அனைவரும் வர வேண்டும்.",
         "te": "శనివారం ఉదయం 10 గంటలకు parents meeting ఉంది. అందరూ రావాలి.",
         "bn": "শনিবার সকাল 10টায় অভিভাবক সভা আছে। সবাইকে আসতে হবে।"
       }
     },
     {
-      "key": "bn-exam", "author": "arjun", "class": "7B", "to": "class", "lang": "bn", "hoursAgo": 5,
-      "raw": "সোমবার অঙ্কের পরীক্ষা হবে। অধ্যায় 3 থেকে প্রশ্ন আসবে।",
-      "clean": "সোমবার অঙ্কের পরীক্ষা হবে। অধ্যায় 3 থেকে প্রশ্ন আসবে।",
+      "key": "hi-exam", "author": "arjun", "class": "7B", "to": "class", "lang": "hi", "hoursAgo": 5,
+      "raw": "सोमवार को गणित की परीक्षा होगी। chapter 3 से सवाल आएँगे।",
+      "say": "सोमवार को गणित की परीक्षा होगी। चैप्टर तीन से सवाल आएँगे।",
+      "clean": "सोमवार को गणित की परीक्षा होगी। chapter 3 से सवाल आएँगे।",
+      "durationMs": 4021,
       "tags": [{ "type": "exam", "subject": "Maths", "due": "mon" }],
       "heardBy": ["bimal"],
       "translations": {
-        "hi": "सोमवार को गणित की परीक्षा होगी। chapter 3 से सवाल आएँगे।",
-        "en": "There is a Maths exam on Monday. Questions will come from chapter 3."
+        "en": "There is a Maths exam on Monday. Questions will come from chapter 3.",
+        "bn": "সোমবার অঙ্কের পরীক্ষা হবে। অধ্যায় 3 থেকে প্রশ্ন আসবে।"
       }
     },
     {
-      "key": "or-uniform", "author": "meena", "class": "5A", "to": ["Ravi Kumar"], "lang": "or", "hoursAgo": 74, "audioOnly": true,
-      "raw": "ଆସନ୍ତାକାଲି ସ୍କୁଲ ୟୁନିଫର୍ମ ପିନ୍ଧି ଆସିବ।",
+      "key": "hi-uniform", "author": "meena", "class": "5A", "to": ["Ravi Kumar"], "lang": "hi", "hoursAgo": 74,
+      "raw": "कल school uniform पहनकर आना।",
+      "say": "कल स्कूल यूनिफ़ॉर्म पहनकर आना।",
+      "clean": "कल school uniform पहनकर आना।",
+      "durationMs": 1958,
       "tags": [{ "type": "notice", "due": null }],
       "translations": {
-        "hi": "कल school uniform पहनकर आना।",
         "en": "Come in school uniform tomorrow.",
+        "ta": "நாளைக்கு school uniform அணிந்து வர வேண்டும்.",
         "te": "రేపు school uniform వేసుకుని రావాలి."
       }
     }
@@ -96,6 +107,8 @@
     {
       "key": "hi-reply", "author": "sunita", "about": "hi-fee", "child": "Ravi Kumar", "lang": "hi", "hoursAgo": 20,
       "raw": "ठीक है मैडम, मैं शुक्रवार को fees भेज दूँगी।",
+      "say": "ठीक है मैडम, मैं शुक्रवार को फीस भेज दूँगी।",
+      "durationMs": 4187,
       "translations": { "en": "All right madam, I will send the fees on Friday.", "ta": "சரி மேடம், வெள்ளிக்கிழமை fees அனுப்புகிறேன்." }
     }
   ]

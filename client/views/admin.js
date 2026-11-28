@@ -1,9 +1,9 @@
-// S11 settings and AI status, S12 teachers and classes, S13 promotion, S14 metrics.
+// S11 school settings, S12 teachers and classes, S13 promotion, S14 metrics.
 import { h, add, icon, replace } from '../lib/dom.js';
 import { api, post, patch } from '../lib/api.js';
 import { t, formatDate, childCount } from '../lib/i18n.js';
 import { voiceCapture } from '../lib/capture.js';
-import { LANGUAGES, lang as languageInfo } from '../lib/languages.js';
+import { LANGUAGES } from '../lib/languages.js';
 import { navigate, adminSchoolId, refreshMe, speakLanguage } from '../lib/state.js';
 import {
   guide, button, sheet, confirmSheet, skeletons, failure, toast, notice, empty, avatar, field, form, segmented,
@@ -29,31 +29,6 @@ async function section(ctx, loader, draw) {
 const radio = (name, value, current, title, help) =>
   h('label', { class: 'card check' }, h('input', { type: 'radio', name, value, checked: value === current }),
     h('span', {}, h('strong', {}, title), h('br'), h('span', { class: 'muted small' }, help)));
-
-const SPEECH_LABEL = {
-  parakeet: ['check-circle', 'status_parakeet'], whisper: ['check-circle', 'status_whisper'],
-  approximate: ['info', 'status_approximate'], browser: ['globe', 'status_browser'], audio_only: ['play', 'status_audio_only'],
-};
-
-function providerPanel() {
-  const box = h('div', { class: 'card' }, h('h2', {}, t('ai_status')), skeletons(1));
-  api('/school/providers').then((status) => {
-    const detail = (label, value) => h('span', { class: 'muted small' }, `${label}: ${value}`);
-    replace(box,
-      h('h2', {}, t('ai_status')),
-      notice(status.nvidia ? 'check-circle' : 'info', [h('p', {}, t(status.nvidia ? 'ai_on' : 'ai_off')),
-        status.llmModels.length ? h('p', { class: 'small models' }, status.llmModels.join(', ')) : h('p', { class: 'small' }, t('ai_off_help'))],
-      status.nvidia ? '' : 'warn'),
-      h('ul', { class: 'lang-status' }, status.languages.map((l) => h('li', {},
-        h('span', { class: 'tier', title: t('tier') }, l.tier),
-        h('span', { class: 'grow' },
-          h('strong', {}, l.name, ' ', h('span', { class: 'muted', lang: l.code }, l.native)),
-          h('span', { class: 'row' }, icon(SPEECH_LABEL[l.speech][0], { size: 18 }), detail(t('status_speech'), t(SPEECH_LABEL[l.speech][1]))),
-          detail(t('status_translation'), l.translation === 'browser' ? t('status_key_missing') : `${l.translation}${l.machineWarning ? ` (${t('may_be_wrong')})` : ''}`),
-          detail(t('status_voice'), l.tts === 'magpie' ? 'NVIDIA' : t('status_phone_voice')))))));
-  }).catch((error) => replace(box, failure(error)));
-  return box;
-}
 
 export function school(ctx) {
   add(ctx.root, h('h1', {}, t('school_settings')));
@@ -83,7 +58,7 @@ export function school(ctx) {
       h('div', { class: 'split-col' },
         button(t('stickers_all'), { iconName: 'printer', kind: 'outline block', href: '/admin/stickers' }),
         button(t('school_qr'), { iconName: 'qr-code', kind: 'outline block', href: '/admin/school-qr' }),
-        providerPanel())));
+        button(t('configuration'), { iconName: 'sliders-horizontal', kind: 'quiet block', href: '/admin/config' }))));
   });
 }
 
@@ -274,13 +249,6 @@ export function reports(ctx) {
         stat(t('metric_replies'), pct(m.parentsReplied), target(m.parentsReplied.target), m.parentsReplied.percent),
         stat(t('metric_before_due'), pct(m.heardBeforeDue), '', m.heardBeforeDue.percent),
         stat(t('metric_notes'), m.notes, '')),
-      h('div', { class: 'card' }, h('h2', {}, t('quality')), m.quality.length
-        ? table([t('language'), t('metric_notes'), t('low_conf_pct'), t('edited_pct')], m.quality.map((q) => [
-          languageInfo(q.lang).name, q.notes, q.lowPercent == null ? null : `${q.lowPercent}%`, q.editedPercent == null ? null : `${q.editedPercent}%`]))
-        : h('p', { class: 'muted' }, t('nothing_yet'))),
-      h('div', { class: 'card' }, h('h2', {}, t('ai_calls')), m.aiUsage.length
-        ? table([t('date'), t('model'), t('calls'), t('errors_429'), t('errors_other')], m.aiUsage.map((u) => [formatDate(u.day), u.model, u.calls, u.errors429, u.errorsOther]))
-        : h('p', { class: 'muted' }, t('nothing_yet'))),
       h('div', { class: 'card' }, h('h2', {}, t('outcomes')), h('p', { class: 'muted' }, t('outcomes_help')),
         form(async (v, el) => {
           const number = (x) => (x === '' ? null : Number(x));

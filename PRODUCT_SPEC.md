@@ -37,6 +37,9 @@ These override v2.1 and the sections below where they differ.
 | Look (4) | Leaf green, Noto | New identity: school-ink blue, Anek type, voice-bar "V" logo, short transitions that respect reduced motion |
 | QR (J1, S15) | Plain codes, 12 or 24 a page | Branded codes with the logo; class or whole-school sheets of 8, 12 or 24 stickers; child stickers also work when a school uses one QR |
 | Public demo (15) | Local only | Demo school resets nightly and has a daily AI limit |
+| Appearance (4) | Followed the phone | **Light by default**; each person can choose dark under Me |
+| AI status (5.7, S11) | In school settings and reports, with key warnings elsewhere | One office **Configuration** screen. Teachers, parents and other office screens show no keys, models or service names |
+| Sample notes (15) | Tamil, Hindi and Bengali recordings | **Hindi and English** recordings in NVIDIA's natural voice; parents still read Tamil, Telugu and Bengali translations |
 
 ---
 

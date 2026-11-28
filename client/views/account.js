@@ -46,6 +46,8 @@ export function account(ctx) {
       : store.me.memberships.some((m) => m.role === 'admin')
         ? row('chalkboard-teacher', t('school_signin'), null, () => navigate('/school/login')) : null,
     row('info', t('help_title'), null, () => navigate('/help'))),
+    h('div', { class: 'section' }, h('h2', {}, t('appearance')),
+      segmented([['light', t('theme_light')], ['dark', t('theme_dark')]], window.vvTheme.current(), window.vvTheme.set)),
     children.length > 0 && h('details', { class: 'card' },
       h('summary', {}, h('strong', {}, t('privacy_title'))),
       h('div', { class: 'row' }, h('p', { class: 'grow muted' }, t('privacy_intro')), speakButton(consentText(), languageOf('consent_stored'))),

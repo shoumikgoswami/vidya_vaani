@@ -1,4 +1,4 @@
-// What each language uses right now, for the admin's AI provider panel (spec 5.7).
+// What each language uses right now, for the office's Configuration screen (spec 5.7).
 import { config } from '../config.js';
 import { LANGUAGES } from '../../client/lib/languages.js';
 import { llmChain } from './llm.js';
@@ -10,6 +10,10 @@ export function providerStatus() {
     nvidia,
     openrouter: Boolean(config.openrouter.apiKey),
     llmModels: chain.map((c) => `${c.provider}: ${c.model}`),
+    speech: {
+      asr: nvidia ? ['NVIDIA Parakeet', 'NVIDIA Whisper'] : [],
+      voice: nvidia ? 'NVIDIA Magpie (Hindi, English)' : null,
+    },
     languages: LANGUAGES.map((l) => {
       const first = l.asr[0];
       let speech;

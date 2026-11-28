@@ -40,8 +40,7 @@ export function words(note, { onRetry } = {}) {
           h('p', { class: 'note-text grow', lang: code, dir: 'auto' }, text), speakButton(text, code))
         : h('p', { class: 'muted' }, t(note.status === 'transcribing' || note.status === 'uploaded' ? 'processing' : 'listen_only')),
       showTranslation && translation.machineWarning && notice('warning', [h('p', {}, t('mt_warning'))], 'warn'),
-      showTranslation && translation.machineWarning && note.english && h('p', { class: 'muted', lang: 'en', dir: 'ltr' }, note.english.text),
-      showTranslation && translation.provider === 'device' && h('p', { class: 'muted small' }, t('translated_on_phone')));
+      showTranslation && translation.machineWarning && note.english && h('p', { class: 'muted', lang: 'en', dir: 'ltr' }, note.english.text));
   }
   draw();
 
