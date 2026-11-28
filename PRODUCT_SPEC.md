@@ -43,6 +43,9 @@ These override v2.1 and the sections below where they differ.
 | Languages (J4, S10) | App language, a reading language per child, and a translation/original switch | **One preferred language** for screens, note text and note sound |
 | Note playback (5.7, S10) | The teacher's recording first, plus a read-aloud button on the translation | **One play button.** In the teacher's language it plays the recording; otherwise it speaks the translation (NVIDIA for Hindi and English, else the phone's voice). A small link still plays the original |
 | Voices (5.7) | One default voice | Each teacher picks a voice (Aria by default) for translated notes. English words in Hindi are written in Devanagari before they are spoken |
+| Home (S1) | An app screen with scan, sign-in and demo people | A **landing page** with a playable note; the demo moved to `/demo`; the installed app keeps the simple screen |
+| New schools (J1, S4) | First-run wizard on any install | On a public site, schools send a **request** and the site owner approves it. The wizard stays for a local install with no owner set. Several schools can share one site |
+| Sample office (13, 15) | Could attach contact details to existing accounts | It can no longer find, show, change or sign in as anyone who really signs in |
 
 ---
 

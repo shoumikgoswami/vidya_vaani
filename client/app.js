@@ -7,8 +7,11 @@ import { stopSpeaking } from './lib/speak.js';
 import * as outbox from './lib/outbox.js';
 import { skeletons, failure, languageSheet, nativeName, toast } from './lib/ui.js';
 import { chooseLanguage, followAccountLanguage } from './app-language.js';
-import './lib/install.js';
-import { home, help, demoSheet } from './views/home.js';
+import { standalone } from './lib/install.js';
+import { home, demo, help, demoSheet } from './views/home.js';
+import { landing } from './views/landing.js';
+import { registerSchool } from './views/register.js';
+import { ownerRequests } from './views/owner.js';
 import { login, schoolLogin, setup } from './views/auth.js';
 import { scan, sticker, schoolSticker } from './views/scan.js';
 import { record } from './views/record.js';
@@ -24,6 +27,9 @@ import { configuration } from './views/config.js';
 // [pattern, view, options]
 const ROUTES = [
   ['/', home],
+  ['/demo', demo, { title: 'demo_try' }],
+  ['/register', registerSchool, { title: 'register_title' }],
+  ['/owner', ownerRequests, { auth: true, title: 'school_requests' }],
   ['/login', login],
   ['/school/login', schoolLogin],
   ['/setup', setup],
@@ -56,6 +62,10 @@ const ROUTES = [
   regex: new RegExp(`^${pattern.replace(/:(\w+)/g, '(?<$1>[^/]+)')}/?$`),
 }));
 
+/** A visitor in a browser meets the landing page, which brings its own header and footer. */
+const LANDING = { view: landing, options: { bare: true }, regex: /^\/$/ };
+const visiting = () => !signedIn() && !standalone() && !(store.config.setupNeeded && !store.config.demoMode);
+
 const TABS = {
   teacher: [['/t', 'users-three', 'tab_classes'], ['/scan', 'qr-code', 'tab_scan'], ['/t/inbox', 'chat-circle', 'tab_replies']],
   parent: [['/p', 'book-open', 'tab_diary'], ['/scan', 'qr-code', 'tab_scan'], ['/me', 'user', 'me']],
@@ -67,11 +77,13 @@ const $ = (id) => document.getElementById(id);
 let cleanups = [];
 let navigation = 0;
 let depth = 0;
+let bare = false;
 
 function drawBanner() {
+  if (bare) return replace($('banner'));
   const parts = [];
   if (!navigator.onLine) parts.push(h('div', { class: 'banner offline' }, icon('wifi-slash', { size: 20 }), t('offline_banner')));
-  if (store.config?.demoMode) {
+  if (store.config?.demoMode && (location.pathname === '/demo' || store.me.user?.isDemo)) {
     parts.push(h('div', { class: 'banner' },
       h('span', {}, t('demo_banner')),
       h('button', { type: 'button', onclick: demoSheet }, t('demo_switch'))));
@@ -132,7 +144,7 @@ async function render(state = {}) {
   document.querySelectorAll('dialog.sheet').forEach((d) => d.close());
 
   const path = location.pathname;
-  const route = ROUTES.find((r) => r.regex.test(path));
+  const route = path === '/' && visiting() ? LANDING : ROUTES.find((r) => r.regex.test(path));
   const main = $('main');
 
   if (!route) return navigate(homeFor(), { replace: true });
@@ -161,10 +173,17 @@ async function render(state = {}) {
   let shown;
   await transition(path, () => {
     if (!ctx.alive()) return;
+    bare = Boolean(route.options.bare);
     main.classList.toggle('wide', Boolean(route.options.wide));
+    main.classList.toggle('full', bare);
     drawBanner();
-    drawTopbar(route);
-    drawTabs();
+    if (bare) {
+      replace($('topbar'));
+      replace($('tabs'));
+    } else {
+      drawTopbar(route);
+      drawTabs();
+    }
     replace(main, root);
     window.scrollTo(0, 0);
     // The view starts here but is not waited for: the screen change must not hang on the network.

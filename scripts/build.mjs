@@ -2,7 +2,7 @@
 // The container serves the same things live (server/app.js).
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from '../server/config.js';
+import { ROOT, config } from '../server/config.js';
 import { cspDirectives, fontStylesheet, modules, FONTS, VENDOR_FILES, VENDOR_DIRS } from '../server/web.js';
 import { clerkFrontendApi } from '../server/auth/clerk.js';
 
@@ -15,6 +15,10 @@ const copy = (from, to, options) => {
 
 fs.rmSync(dist, { recursive: true, force: true });
 copy(path.join(ROOT, 'client'), dist);
+// Link previews need a full address for the picture.
+const page = path.join(dist, 'index.html');
+fs.writeFileSync(page, fs.readFileSync(page, 'utf8')
+  .replace('content="/img/share.jpg"', () => `content="${config.publicBaseUrl}/img/share.jpg"`));
 
 for (const [url, file] of Object.entries(VENDOR_FILES)) copy(file, out(url));
 // Only the icon weights the app draws.

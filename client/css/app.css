@@ -292,6 +292,9 @@ button.chip:active { transform: scale(0.95); }
 .voice-pick .mark { display: grid; place-items: center; width: 28px; height: 28px; flex: none; border-radius: var(--pill); border: 1.5px solid var(--line-strong); color: transparent; }
 .voice-pick[aria-pressed='true'] .mark { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
 
+/* Off screen for people. A program that fills in every field writes here too. */
+.trap { position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; border: 0; opacity: 0; clip-path: inset(50%); pointer-events: none; }
+
 /* ---------- Forms ---------- */
 
 .field { display: flex; flex-direction: column; gap: 6px; }

@@ -193,11 +193,13 @@ async function signInPage(ctx, portal) {
         speakButton(spoken, languageOf(guideKey || 'school_login_guide'))),
       body),
     h('div', { class: 'signin-links' },
-      office && store.config.setupNeeded && button(t('setup_title'), { iconName: 'plus', kind: 'outline block', href: '/setup' }),
+      office && (store.config.setupNeeded
+        ? button(t('setup_title'), { iconName: 'plus', kind: 'outline block', href: '/setup' })
+        : button(t('register_cta'), { iconName: 'plus', kind: 'outline block', href: '/register' })),
       button(t(office ? 'family_login_link' : 'school_login_link'), {
         iconName: office ? 'users' : 'chalkboard-teacher', kind: 'quiet block', href: office ? '/login' : '/school/login',
       }),
-      store.config.demoMode && button(t('demo_try'), { iconName: 'house', kind: 'quiet block', href: '/' })));
+      store.config.demoMode && button(t('demo_try'), { iconName: 'house', kind: 'quiet block', href: '/demo' })));
   const inner = { ...ctx, root: body };
   if (store.config.clerk) await clerkLogin(inner, portal, next);
   else if (store.config.otpLogin) add(body, demoPhoneLogin(ctx, portal, next));

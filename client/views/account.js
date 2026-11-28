@@ -76,6 +76,7 @@ export function account(ctx) {
         ? row('users', t('family_signin'), null, () => navigate('/login')) : null
       : store.me.memberships.some((m) => m.role === 'admin')
         ? row('chalkboard-teacher', t('school_signin'), null, () => navigate('/school/login')) : null,
+    store.me.owner && row('check-circle', t('school_requests'), null, () => navigate('/owner')),
     row('info', t('help_title'), null, () => navigate('/help'))),
     store.me.portal !== 'school' && membershipFor('teacher') && voicePicker(),
     h('div', { class: 'section' }, h('h2', {}, t('appearance')),

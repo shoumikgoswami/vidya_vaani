@@ -14,6 +14,7 @@ import { router as notes } from './routes/notes.js';
 import { router as parent } from './routes/parent.js';
 import { router as admin } from './routes/admin.js';
 import { router as misc } from './routes/misc.js';
+import { router as register } from './routes/register.js';
 import { registerHandlers } from './jobs/handlers.js';
 
 function securityHeaders() {
@@ -57,7 +58,7 @@ export function createApp() {
   api.use(express.json({ limit: '100kb' }));
   // Signing in with a Clerk bearer token carries its own proof, so it needs no CSRF header.
   api.use((req, res, next) => (req.path === '/auth/clerk' && req.get('authorization') ? next() : csrfProtection(req, res, next)));
-  api.use(auth, resolve, teacher, notes, parent, admin, misc);
+  api.use(auth, resolve, teacher, notes, parent, admin, misc, register);
   api.use((_req, res) => res.status(404).json({ error: 'not_found' }));
   app.use('/api', api);
 

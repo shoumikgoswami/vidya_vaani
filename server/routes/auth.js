@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { config } from '../config.js';
 import { get, all, update, insert, run } from '../db/index.js';
 import { parse, fail, normalizePhone, normalizeEmail, limiter, audit, now, randomToken } from '../lib/util.js';
-import { createSession, destroySession, requireUser } from '../auth/session.js';
+import { createSession, destroySession, requireUser, isOwner } from '../auth/session.js';
 import { sendOtp, verifyOtp, otpLoginEnabled } from '../auth/otp.js';
 import { identityFromToken, clerkFrontendApi } from '../auth/clerk.js';
 import { userForIdentity, findOrCreateUser } from '../auth/users.js';
@@ -13,19 +13,25 @@ import { isLang, LANG_CODES, VOICES } from '../../client/lib/languages.js';
 export const router = Router();
 const signInLimit = limiter({ name: 'signin', max: 30, windowMs: 15 * 60_000 });
 
-export const setupNeeded = async () => !await get('SELECT 1 FROM school WHERE is_demo = 0');
+/**
+ * The first-run wizard belongs to a school installing the app on its own computer. On the public
+ * site anyone could claim it, so there schools send a request instead.
+ */
+const openSetup = () => !config.serverless && !config.ownerEmails.length;
+
+export const setupNeeded = async () => openSetup() && !await get('SELECT 1 FROM school WHERE is_demo = 0');
 
 const portalField = z.enum(['family', 'school']).default('family');
 
 /** The school office sign-in admits office staff only, or a newcomer about to create the school. */
-async function admit(req, res, user, portal, method) {
+async function admit(req, res, user, portal, method, session) {
   if (portal === 'school') {
     const roles = (await all('SELECT role FROM membership WHERE user_id = ? AND active = 1', user.id)).map((m) => m.role);
     // Someone who already teaches here is not the person setting up a school.
     const founder = await setupNeeded() && !roles.length;
     if (!roles.includes('admin') && !founder) fail(403, 'not_school_staff');
   }
-  await createSession(req, res, user.id, portal);
+  await createSession(req, res, user.id, portal, session);
   await audit(user.id, 'auth.login', { meta: { method, portal } });
   res.json({ ok: true });
 }
@@ -67,7 +73,9 @@ router.post('/auth/clerk', signInLimit, async (req, res) => {
   if (!token) fail(401, 'clerk_token_missing');
   const { portal } = parse(z.object({ portal: portalField }), req.body);
   const identity = await identityFromToken(token, `${req.protocol}://${req.get('host')}`);
-  await admit(req, res, await userForIdentity(identity), portal, 'clerk');
+  // The addresses here were verified by Clerk, unlike anything stored on the account.
+  const ownerEmail = identity.emails.find((email) => config.ownerEmails.includes(email));
+  await admit(req, res, await userForIdentity(identity), portal, 'clerk', { ownerEmail });
 });
 
 router.post('/auth/logout', async (req, res) => {
@@ -94,6 +102,7 @@ export async function describeMe(user) {
   );
   return {
     portal: user.portal || 'family',
+    owner: isOwner(user),
     user: {
       id: user.id, name: user.name, phone: user.phone, email: user.email, uiLang: user.ui_lang, voice: user.voice || VOICES[0],
       isDemo: Boolean(user.is_demo),

@@ -1,16 +1,16 @@
 // Offline shell, remembered diary pages and push notifications.
 // Pages and data are network first (always fresh when there is a network), vendor files cache first.
 
-const SHELL = 'vv-shell-v5';
+const SHELL = 'vv-shell-v6';
 const DATA = 'vv-data';
 const VENDOR = 'vv-vendor-v2';
 
 const SHELL_FILES = [
-  '/', '/theme.js', '/css/app.css', '/app.js', '/app-language.js', '/manifest.webmanifest', '/vendor/fonts.css', '/i18n/en.json',
+  '/', '/theme.js', '/css/app.css', '/css/landing.css', '/app.js', '/app-language.js', '/manifest.webmanifest', '/vendor/fonts.css', '/i18n/en.json',
   '/img/icon.svg', '/img/icon-192.png', '/img/badge-96.png',
   ...['api', 'capture', 'dom', 'i18n', 'install', 'languages', 'outbox', 'push', 'qr-scan', 'recorder', 'speak', 'state', 'translator-fallback', 'ui']
     .map((n) => `/lib/${n}.js`),
-  ...['account', 'admin', 'auth', 'config', 'confirm', 'consent', 'home', 'note', 'parent', 'record', 'reply', 'scan', 'stickers', 'teacher']
+  ...['account', 'admin', 'auth', 'config', 'confirm', 'consent', 'home', 'landing', 'note', 'owner', 'parent', 'record', 'register', 'reply', 'scan', 'stickers', 'teacher']
     .map((n) => `/views/${n}.js`),
 ];
 

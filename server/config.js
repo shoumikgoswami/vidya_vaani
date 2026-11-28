@@ -31,6 +31,8 @@ export function loadConfig(env = process.env) {
     publicBaseUrl: str('PUBLIC_BASE_URL', `http://localhost:${port}`).replace(/\/+$/, ''),
     demoMode: bool('DEMO_MODE', true),
     trustProxy: bool('TRUST_PROXY', serverless),
+    // Who approves requests from new schools: the emails the site owner signs in with.
+    ownerEmails: list('OWNER_EMAILS', '').map((email) => email.toLowerCase()),
     sessionDays: 180,
     maxNoteSeconds: 120,
     clerk: {

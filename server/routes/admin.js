@@ -93,11 +93,17 @@ router.post('/teachers', async (req, res) => {
   const phone = body.phone ? normalizePhone(body.phone) || fail(400, 'phone_invalid') : null;
   const email = body.email ? normalizeEmail(body.email) || fail(400, 'email_invalid') : null;
   if (!phone && !email) fail(400, 'phone_or_email_needed');
-  const byPhone = await userByPhone(phone);
-  const byEmail = await userByEmail(email);
+  // The sample office is open to anyone, so it must not find, show or add people who really sign in.
+  const visible = (found) => (school.is_demo && found?.clerk_user_id ? undefined : found);
+  const held = [await userByPhone(phone), await userByEmail(email)];
+  const [byPhone, byEmail] = held.map(visible);
   if (byPhone && byEmail && byPhone.id !== byEmail.id) fail(409, 'phone_email_belong_to_different_people');
 
-  const user = await findOrCreateUser({ phone, email, name: body.name, isDemo: school.is_demo });
+  const hidden = held.some((found) => found && !visible(found));
+  // A number that belongs to a real account is dropped: the sample teacher is a separate person.
+  const user = await findOrCreateUser({
+    phone: hidden ? null : phone, email: hidden ? null : email, name: body.name, isDemo: school.is_demo,
+  });
   if (await get(`SELECT 1 FROM membership WHERE user_id = ? AND school_id = ? AND role = 'teacher'`, user.id, school.id)) {
     fail(409, 'teacher_exists');
   }
@@ -124,7 +130,8 @@ router.patch('/teachers/:id', async (req, res) => {
     subjects: body.subjects && JSON.stringify(body.subjects),
     active: body.active === undefined ? undefined : body.active ? 1 : 0,
   });
-  if (body.name) await update('app_user', m.user_id, { name: body.name });
+  // The office may correct the name it typed, not rename someone who has since signed in as themselves.
+  if (body.name) await run('UPDATE app_user SET name = ? WHERE id = ? AND clerk_user_id IS NULL', body.name, m.user_id);
   if (body.active === false) await audit(req.user.id, 'teacher.deactivate', { schoolId: m.school_id, entity: 'membership', entityId: m.id });
   res.json({ ok: true });
 });

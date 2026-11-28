@@ -20,9 +20,9 @@ Docker Compose 2.24 or newer is required for the optional `.env` file. On older 
 
 ## Two-minute walkthrough
 
-Demo mode is on by default: a sample school, one-tap role switching and "simulate scan" in place of a printed sticker.
+The front page introduces the app and plays a real note. Demo mode is on by default: a sample school, one-tap role switching and "simulate scan" in place of a printed sticker.
 
-1. On the home screen tap **Lakshmi Iyer** (an English-speaking science teacher).
+1. Tap **Try the demo** (or open `/demo`), then tap **Lakshmi Iyer** (an English-speaking science teacher).
 2. Tap **Scan QR**, then **Simulate scan**, then **Ravi Kumar**. Speak a note in English and tap **Save**. (No microphone? Use the sample notes already in Ravi's diary.)
 3. Tap **Switch person** and choose **Sunita Devi**, Ravi's Hindi-speaking mother. The whole app turns to Hindi.
 4. Play the English note: one button speaks it in Hindi, and the link under the words plays the teacher's own voice. (Selvi, Padma and Bimal use Tamil, Telugu and Bengali, spoken by the phone's voice where it has one.)
@@ -32,14 +32,22 @@ Demo mode is on by default: a sample school, one-tap role switching and "simulat
 
 Without an NVIDIA key, a note you record yourself keeps the browser's own live transcript where the browser has one (Chrome, Edge), and translation shows as unavailable. The sample notes carry stored transcripts and translations, so the cross-language flow always works. The sample school speaks Hindi and English, in NVIDIA's synthetic voice unless real recordings are placed in `demo/sample-notes/`.
 
-## Two sign-ins
+## Who sees what
 
-| Who | Address | Opens |
-|---|---|---|
-| Teachers and parents | `/login` | Classes and recording, or the child's diary |
-| School office (principal, clerk) | `/school/login` | School settings, teachers and classes, reports, first-run setup |
+| Address | Opens |
+|---|---|
+| `/` | The landing page. Signed-in people go to their own screen, and the installed app shows a simple scan-and-sign-in screen |
+| `/demo` | The sample school |
+| `/login` | Teachers and parents: classes and recording, or the child's diary |
+| `/school/login` | School office (principal, clerk): settings, teachers and classes, reports |
+| `/register` | A new school sends a request |
+| `/owner` | The site owner approves or declines requests |
 
 The office sign-in admits only accounts the school lists as office staff, or a newcomer on a fresh install who is about to create the school. The server applies office rights only to sessions that came through it: someone who is both a principal and a teacher signs in at the office for school work and at the other door to record notes.
+
+### New schools
+
+On your own computer with no owner set, the first person to run the setup wizard creates the school. On a public site that would let a stranger claim it, so set `OWNER_EMAILS` to your sign-in email (it needs Clerk). The wizard is then switched off, and always is on Netlify: schools send a request at `/register`, and you approve it at `/owner`. Approval creates the school and gives its office to the email in the request, or to the mobile number when there is no email. No message is sent, so tell the school yourself. Each school sees only its own data.
 
 ## Install it on a phone
 
@@ -171,6 +179,8 @@ On Windows, `scripts\netlify-secrets.ps1` does the import in one step: run it an
 4. To deploy from GitHub, link the repository once in Netlify (Project configuration, Build & deploy, Link repository) and pick the `main` branch. The build settings come from `netlify.toml`. From then on every push to `main` is built and published, and a build that fails leaves the last version live. Netlify does not wait for the GitHub checks, so run `npm test` before pushing.
 
 Netlify stops a build when the value of a secret setting appears in the code or the built files. `netlify.toml` lists the settings that are public by nature, such as model names and addresses. Never add a real key or the database address to that list.
+
+Add `OWNER_EMAILS` in Netlify's environment variables so you can approve schools. If you mark it secret, it is already listed in `netlify.toml` as a setting the secret scan may skip.
 
 `PUBLIC_BASE_URL` is printed into the QR codes, so set it before printing stickers. The database tables and the sample school are created on first use. Functions:
 

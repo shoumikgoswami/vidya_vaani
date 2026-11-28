@@ -24,7 +24,8 @@ window.addEventListener('appinstalled', () => {
   toast(t('installed'));
 });
 
-const standalone = () =>
+/** True when the app was opened from the phone's home screen. */
+export const standalone = () =>
   window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
 const isIos = () =>

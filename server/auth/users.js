@@ -68,7 +68,7 @@ export function userForIdentity({ clerkUserId = null, phones = [], emails = [], 
  * Anyone may act as the sample school's office and type anything into it. So a real sign-in never
  * takes over an account made there: that account gives up the verified phone or email instead.
  */
-async function releaseFromSamples(phones, emails) {
+export async function releaseFromSamples(phones, emails) {
   for (const [column, values] of [['phone', phones], ['email', emails]]) {
     for (const value of values) {
       await run(`UPDATE app_user SET ${column} = NULL WHERE ${column} = ? AND is_demo = 1 AND clerk_user_id IS NULL`, value);
@@ -103,11 +103,17 @@ async function mergeUsers(fromId, intoId) {
 /** A parent whose verified phone or email is on a child's record is linked at once (spec 2.2). */
 export async function autoLinkGuardian(userId, { phones = [], emails = [] }) {
   const matches = new Map();
-  for (const phone of phones) {
-    for (const s of await all('SELECT id, school_id FROM student WHERE parent_phone = ? AND active = 1', phone)) matches.set(s.id, s);
-  }
-  for (const email of emails) {
-    for (const s of await all('SELECT id, school_id FROM student WHERE parent_email = ? AND active = 1', email)) matches.set(s.id, s);
+  for (const [column, values] of [['parent_phone', phones], ['parent_email', emails]]) {
+    for (const value of values) {
+      // Anyone can type a number into the sample school, so it never claims a real, verified account.
+      const found = await all(
+        `SELECT s.id, s.school_id FROM student s JOIN school sc ON sc.id = s.school_id
+         WHERE s.${column} = ? AND s.active = 1
+           AND (sc.is_demo = 0 OR EXISTS (SELECT 1 FROM app_user u WHERE u.id = ? AND u.clerk_user_id IS NULL))`,
+        value, userId,
+      );
+      for (const s of found) matches.set(s.id, s);
+    }
   }
   for (const student of matches.values()) {
     const link = await get('SELECT * FROM guardian_link WHERE student_id = ? AND user_id = ?', student.id, userId);

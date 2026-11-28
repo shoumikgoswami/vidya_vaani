@@ -363,6 +363,18 @@ test('the open sample office cannot be used to get into a real account', async (
   assert.notEqual(later.id, second.id);
   assert.notEqual(later.id, invited.id);
   assert.equal((await app.db.get('SELECT COUNT(*) AS n FROM membership WHERE user_id IN (?,?)', second.id, later.id)).n, 0);
+
+  // The sample office neither shows a real person's details nor ties them to a sample child.
+  const real = await userForIdentity({ clerkUserId: 'user_private', phones: ['+919870000003'], emails: ['private@example.com'], name: 'Private Person' });
+  assert.equal((await add({ name: 'Looked Up', phone: '9870000003' })).status, 201);
+  const shown = JSON.stringify((await admin.get(`/api/teachers?school=${ids.school}`)).data);
+  assert.ok(!shown.includes('private@example.com') && !shown.includes('Private Person') && !shown.includes('9870000003'));
+  const child = await meena.post(`/api/classes/${ids.class5}/students`, {
+    students: [{ name: 'Sample Child', parentPhone: '9870000003' }], force: true,
+  });
+  assert.equal(child.status, 201);
+  assert.equal((await app.db.get('SELECT COUNT(*) AS n FROM guardian_link WHERE user_id = ?', real.id)).n, 0);
+  assert.equal((await app.db.get('SELECT COUNT(*) AS n FROM membership WHERE user_id = ?', real.id)).n, 0);
 });
 
 test('the school office has its own sign-in', async () => {

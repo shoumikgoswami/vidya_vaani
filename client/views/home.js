@@ -70,7 +70,7 @@ export function demoSheet() {
         await refreshMe();
         close();
         toast(t('demo_reset_done'));
-        navigate('/', { replace: true });
+        navigate('/demo', { replace: true });
       },
     }),
   ]);
@@ -85,6 +85,20 @@ const voiceMark = () =>
   h('div', { class: 'voice-mark', 'aria-hidden': 'true' },
     [12, 22, 34, 22, 40, 26, 16, 30, 12].map((height, i) => h('i', { style: `--h:${height};--n:${i}` })));
 
+/** The sample school: act as a person, or tap a child's sticker without a printer. */
+export function demo(ctx) {
+  if (!store.config.demoMode) return navigate('/', { replace: true });
+  reveal(ctx.root);
+  add(ctx.root,
+    h('div', { class: 'page-head' }, h('h1', {}, t('demo_try'))),
+    h('div', { class: 'guide' }, h('p', {}, t('demo_try_help')), speakButton(t('demo_try_help'), languageOf('demo_try_help'))),
+    personaList(),
+    button(t('demo_simulate'), { iconName: 'qr-code', kind: 'outline block', onClick: simulateScan }),
+    h('p', { class: 'muted small' }, t('demo_privacy')),
+    button(t('back_home'), { kind: 'quiet block', href: '/' }));
+}
+
+/** The simple first screen of the installed app. A browser visitor sees the landing page instead. */
 export async function home(ctx) {
   if (signedIn()) return navigate(homeFor(), { replace: true });
   const { demoMode, setupNeeded } = store.config;
@@ -103,14 +117,11 @@ export async function home(ctx) {
         doorway('/login', 'users', 'family_signin', 'family_signin_detail'),
         doorway('/school/login', 'chalkboard-teacher', 'school_signin', 'school_signin_detail'))),
     installCard({ onLeave: ctx.onLeave }),
-    demoMode && h('section', { class: 'section', 'aria-labelledby': 'demo-title' },
-      h('div', { class: 'row' }, h('h2', { class: 'grow', id: 'demo-title' }, t('demo_try')), speakButton(t('demo_try_help'), languageOf('demo_try_help'))),
-      h('p', { class: 'muted' }, t('demo_try_help')),
-      personaList(),
-      h('p', { class: 'muted small' }, t('demo_privacy')),
-      button(t('demo_simulate'), { iconName: 'qr-code', kind: 'outline block', onClick: simulateScan })),
-    setupNeeded && h('div', { class: 'card' }, h('h2', {}, t('setup_title')), h('p', {}, t('setup_help')),
-      button(t('setup_start'), { iconName: 'chalkboard-teacher', kind: 'outline block', href: '/setup' })),
+    demoMode && button(t('demo_try'), { iconName: 'users-three', kind: 'outline big block', href: '/demo' }),
+    setupNeeded
+      ? h('div', { class: 'card' }, h('h2', {}, t('setup_title')), h('p', {}, t('setup_help')),
+        button(t('setup_start'), { iconName: 'chalkboard-teacher', kind: 'outline block', href: '/setup' }))
+      : button(t('register_cta'), { iconName: 'plus', kind: 'quiet block', href: '/register' }),
     button(t('help_title'), { iconName: 'info', kind: 'quiet block', href: '/help' }));
 }
 

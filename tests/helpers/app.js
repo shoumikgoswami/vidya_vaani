@@ -19,6 +19,7 @@ export async function startApp(env = {}) {
     OPENROUTER_API_KEY: '',
     CLERK_PUBLISHABLE_KEY: '',
     CLERK_SECRET_KEY: '',
+    OWNER_EMAILS: '',
     NVIDIA_RPM_LIMIT: '1000',
     NVIDIA_TRANSLATE_HI_EN: 'false',
     ...env,
