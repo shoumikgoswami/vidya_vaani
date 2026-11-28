@@ -1,32 +1,27 @@
 # Sends this app's secrets to the linked Netlify site. Run it yourself:
 #   powershell -ExecutionPolicy Bypass -File scripts\netlify-secrets.ps1
-# then copy the pooled connection string in Neon. The script waits for it.
-# Takes the Clerk and AI keys from .env and the database address from the clipboard. Prints names only.
-param([int]$WaitSeconds = 300)
+# and paste the pooled connection string from Neon when asked. The text stays hidden.
+# Takes the Clerk and AI keys from .env. Prints names only.
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path $PSScriptRoot -Parent)
 
-function Find-Address {
-  $text = [string](Get-Clipboard -Raw -ErrorAction SilentlyContinue)
-  [regex]::Match($text, 'postgres(ql)?://[^\s''"]+').Value
-}
-
-$address = Find-Address
-if (-not $address) {
-  Write-Host 'Waiting: in Neon, press "Copy snippet" under the connection string. Nothing else to do here.'
-}
-$warned = $false
-$until = (Get-Date).AddSeconds($WaitSeconds)
-while (-not $address -or $address -match '\*\*\*') {
-  if ($address -and -not $warned) {
-    Write-Host 'That copy hides the password. In Neon press "Show password", then "Copy snippet" again.'
-    $warned = $true
+$address = ''
+for ($try = 1; $try -le 3 -and -not $address; $try++) {
+  $hidden = Read-Host -AsSecureString 'Paste the Neon connection string and press Enter (it will not show)'
+  $text = [System.Net.NetworkCredential]::new('', $hidden).Password
+  # Pressing Enter on an empty line takes whatever was last copied.
+  if (-not $text.Trim()) { $text = [string](Get-Clipboard -Raw -ErrorAction SilentlyContinue) }
+  $found = [regex]::Match($text, 'postgres(ql)?://[^\s''"]+').Value
+  if (-not $found) {
+    Write-Host 'That is not a connection string. It starts with postgresql://'
+  } elseif ($found -match '\*\*\*') {
+    Write-Host 'The password in it is hidden. In Neon press "Show password", copy again, then paste.'
+  } else {
+    $address = $found
   }
-  if ((Get-Date) -gt $until) { throw 'No connection string was copied in time. Run the script again when you are ready.' }
-  Start-Sleep -Seconds 1
-  $address = Find-Address
 }
-Write-Host 'Got the connection string. Sending to Netlify...'
+if (-not $address) { throw 'No usable connection string. Run the script again when you have it.' }
+Write-Host 'Got it. Sending to Netlify...'
 if ($address -notmatch '-pooler\.') { Write-Warning 'This is not the pooled address. Turn on connection pooling in Neon if the app is slow to connect.' }
 
 $names = '^(CLERK_PUBLISHABLE_KEY|CLERK_SECRET_KEY|NVIDIA_API_KEY|OPENROUTER_API_KEY)=.'
