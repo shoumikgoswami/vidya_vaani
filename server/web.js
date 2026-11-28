@@ -5,16 +5,17 @@ import path from 'node:path';
 import { config, ROOT } from './config.js';
 import { clerkFrontendApi } from './auth/clerk.js';
 
-export function cspDirectives() {
-  const clerk = config.clerk.enabled ? [`https://${clerkFrontendApi()}`] : [];
+/** `clerkHost` is the Clerk instance the page may talk to, or nothing when Clerk is not used. */
+export function cspDirectives({ clerkHost = config.clerk.enabled ? clerkFrontendApi() : null } = {}) {
+  const clerk = clerkHost ? [`https://${clerkHost}`] : [];
   // Clerk's bot protection loads from these in addition to the instance's own host.
-  const challenge = config.clerk.enabled ? ['https://challenges.cloudflare.com', 'https://*.protect.clerk.com'] : [];
+  const challenge = clerkHost ? ['https://challenges.cloudflare.com', 'https://*.protect.clerk.com'] : [];
   return {
     defaultSrc: ["'self'"],
     scriptSrc: ["'self'", ...clerk, ...challenge],
     // Clerk's bot check also probes its own domain on other ports.
-    connectSrc: ["'self'", ...clerk, ...challenge, ...(config.clerk.enabled ? ['https://*.protect.clerk.com:*', 'https://clerk-telemetry.com'] : [])],
-    imgSrc: ["'self'", 'data:', 'blob:', ...(config.clerk.enabled ? ['https://img.clerk.com'] : [])],
+    connectSrc: ["'self'", ...clerk, ...challenge, ...(clerkHost ? ['https://*.protect.clerk.com:*', 'https://clerk-telemetry.com'] : [])],
+    imgSrc: ["'self'", 'data:', 'blob:', ...(clerkHost ? ['https://img.clerk.com'] : [])],
     mediaSrc: ["'self'", 'data:', 'blob:'],
     styleSrc: ["'self'", "'unsafe-inline'"],
     fontSrc: ["'self'", 'data:'],

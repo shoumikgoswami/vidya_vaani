@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from '../server/config.js';
 import { cspDirectives, fontStylesheet, modules, FONTS, VENDOR_FILES, VENDOR_DIRS } from '../server/web.js';
+import { clerkFrontendApi } from '../server/auth/clerk.js';
 
 const dist = path.join(ROOT, 'dist');
 const out = (url) => path.join(dist, ...url.split('/').filter(Boolean));
@@ -29,7 +30,10 @@ for (const file of fonts) {
 }
 
 const kebab = (name) => name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
-const csp = Object.entries(cspDirectives()).map(([name, values]) => `${kebab(name)} ${values.join(' ')}`).join(';');
+// Keys marked secret on Netlify cannot be read by a build on your own computer. The page is then
+// allowed to reach any Clerk development instance; with a readable key, only that one.
+const clerkHost = clerkFrontendApi(process.env.CLERK_PUBLISHABLE_KEY || '') || '*.clerk.accounts.dev';
+const csp = Object.entries(cspDirectives({ clerkHost })).map(([name, values]) => `${kebab(name)} ${values.join(' ')}`).join(';');
 const headers = {
   '/*': [
     `Content-Security-Policy: ${csp}`,
