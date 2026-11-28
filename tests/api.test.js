@@ -341,6 +341,30 @@ test('a username-only account stays separate and is never linked automatically',
   assert.equal((await app.db.get('SELECT COUNT(*) AS n FROM guardian_link WHERE user_id IN (?,?)', first.id, second.id)).n, 0);
 });
 
+test('the open sample office cannot be used to get into a real account', async () => {
+  const { userForIdentity } = await import('../server/auth/users.js');
+  const add = (fields) => admin.post('/api/teachers', { school: ids.school, speakLang: 'hi', ...fields });
+  const row = (id) => app.db.get('SELECT * FROM app_user WHERE id = ?', id);
+
+  // A real person with only a mobile number. The sample office adds that number with another email.
+  const victim = await userForIdentity({ clerkUserId: 'user_victim', phones: ['+919870000001'] });
+  assert.equal((await add({ name: 'Added', phone: '9870000001', email: 'intruder@example.com' })).status < 500, true);
+  assert.equal((await row(victim.id)).email, null, 'the account gains no email');
+  const intruder = await userForIdentity({ clerkUserId: 'user_intruder', emails: ['intruder@example.com'] });
+  assert.notEqual(intruder.id, victim.id);
+
+  // The same, before the real person has ever signed in.
+  assert.equal((await add({ name: 'Waiting', phone: '9870000002', email: 'second@example.com' })).status, 201);
+  const invited = await app.db.get(`SELECT id FROM app_user WHERE phone = '+919870000002'`);
+  assert.equal((await app.client().post('/api/demo/login', { userId: invited.id })).status, 403, 'only the named sample people');
+  const second = await userForIdentity({ clerkUserId: 'user_second', emails: ['second@example.com'] });
+  const later = await userForIdentity({ clerkUserId: 'user_later', phones: ['+919870000002'] });
+  assert.notEqual(second.id, invited.id);
+  assert.notEqual(later.id, second.id);
+  assert.notEqual(later.id, invited.id);
+  assert.equal((await app.db.get('SELECT COUNT(*) AS n FROM membership WHERE user_id IN (?,?)', second.id, later.id)).n, 0);
+});
+
 test('the school office has its own sign-in', async () => {
   // A parent or teacher is turned away, and gets no session.
   const outsider = app.client();

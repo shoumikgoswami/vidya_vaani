@@ -69,12 +69,12 @@ router.get('/demo/personas', demoOnly, async (_req, res) => {
 
 router.post('/demo/login', demoOnly, limiter({ max: 120, windowMs: 60_000 }), async (req, res) => {
   const { userId } = parse(z.object({ userId: z.number().int() }), req.body);
-  if (!(await demoUsers()).some((u) => u.id === userId)) fail(403, 'forbidden');
-  const { phone } = await get('SELECT phone FROM app_user WHERE id = ?', userId);
-  const persona = DEMO_PERSONAS.find((p) => p.phone === phone);
-  await createSession(req, res, userId, persona?.role === 'admin' ? 'school' : 'family');
+  // Only the named sample people, never an account someone added to the sample school.
+  const phone = (await demoUsers()).find((u) => u.id === userId)?.phone;
+  const persona = DEMO_PERSONAS.find((p) => p.phone === phone) || fail(403, 'forbidden');
+  await createSession(req, res, userId, persona.role === 'admin' ? 'school' : 'family');
   await audit(userId, 'auth.login', { meta: { method: 'demo_switch' } });
-  res.json({ ok: true, persona: persona && { ...persona, phone: undefined } });
+  res.json({ ok: true, persona: { ...persona, phone: undefined } });
 });
 
 /** "Simulate scan": the demo school's stickers as tappable cards. */

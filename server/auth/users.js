@@ -6,15 +6,15 @@ export const userByPhone = async (phone) => (phone ? await get('SELECT * FROM ap
 export const userByEmail = async (email) => (email ? await get('SELECT * FROM app_user WHERE email = ?', email) : undefined);
 export const userById = (id) => get('SELECT * FROM app_user WHERE id = ?', id);
 
-/** Used when an admin invites a teacher: the row exists before that person ever signs in. */
+/**
+ * Used when an admin invites a teacher: the row exists before that person ever signs in.
+ * An account that already exists never gains a phone or email here. Whoever types an identifier into
+ * a form has proved nothing, and signing in with it would open that person's account.
+ */
 export async function findOrCreateUser({ phone = null, email = null, name = null, isDemo = 0 }) {
   const existing = await userByPhone(phone) || await userByEmail(email);
   if (existing) {
-    const patch = {};
-    if (!existing.name && name) patch.name = name;
-    if (!existing.phone && phone && !await userByPhone(phone)) patch.phone = phone;
-    if (!existing.email && email && !await userByEmail(email)) patch.email = email;
-    await update('app_user', existing.id, patch);
+    if (!existing.name && name) await update('app_user', existing.id, { name });
     return userById(existing.id);
   }
   const id = await insert('app_user', { phone, email, name, is_demo: isDemo ? 1 : 0, created_at: now() });
@@ -35,6 +35,7 @@ async function usersFor(phones, emails) {
  */
 export function userForIdentity({ clerkUserId = null, phones = [], emails = [], name = null }) {
   return tx(async () => {
+    if (clerkUserId) await releaseFromSamples(phones, emails);
     let user = clerkUserId ? await get('SELECT * FROM app_user WHERE clerk_user_id = ?', clerkUserId) : undefined;
     user ||= (await usersFor(phones, emails))[0];
 
@@ -44,8 +45,8 @@ export function userForIdentity({ clerkUserId = null, phones = [], emails = [], 
       });
       user = await userById(id);
     } else {
-      // A Clerk sign-in is a real person: their account leaves the demo switcher. The demo phone
-      // login proves nothing, so a sample person signing in that way stays a sample person.
+      // A Clerk sign-in is a real person. The demo phone login proves nothing, so a sample person
+      // signing in that way stays a sample person.
       const patch = clerkUserId ? { is_demo: 0 } : {};
       if (clerkUserId && !user.clerk_user_id) patch.clerk_user_id = clerkUserId;
       if (name && !user.name) patch.name = name;
@@ -61,6 +62,18 @@ export function userForIdentity({ clerkUserId = null, phones = [], emails = [], 
     await autoLinkGuardian(user.id, { phones, emails });
     return userById(user.id);
   });
+}
+
+/**
+ * Anyone may act as the sample school's office and type anything into it. So a real sign-in never
+ * takes over an account made there: that account gives up the verified phone or email instead.
+ */
+async function releaseFromSamples(phones, emails) {
+  for (const [column, values] of [['phone', phones], ['email', emails]]) {
+    for (const value of values) {
+      await run(`UPDATE app_user SET ${column} = NULL WHERE ${column} = ? AND is_demo = 1 AND clerk_user_id IS NULL`, value);
+    }
+  }
 }
 
 async function mergeUsers(fromId, intoId) {
