@@ -59,6 +59,28 @@ const hero = (ctx) => h('section', { class: 'lp-hero lp-wrap', 'aria-labelledby'
     h('div', { class: 'lp-ctas' }, demoButton('primary big'), registerButton(store.config.demoMode ? 'outline big' : 'primary big'))),
   sampleNote(ctx));
 
+/** The short film. Nothing but its picture is downloaded until someone asks to watch. */
+function film(ctx) {
+  const video = h('video', {
+    src: '/media/film.mp4', poster: '/media/film.jpg', preload: 'none', playsinline: true, width: 1280, height: 720,
+    'aria-labelledby': 'lp-film',
+  });
+  const start = h('button', { type: 'button', class: 'lp-play' }, icon('play', { weight: 'fill' }), h('span', {}, t('lp_film_play')));
+  start.addEventListener('click', () => {
+    video.controls = true;
+    start.remove();
+    video.play().catch(() => {});
+    video.focus();
+  });
+  // One voice at a time: the film and the sample note stop each other.
+  video.addEventListener('play', () => ctx.root.querySelector('.lp-note .player')?.stop());
+  ctx.root.addEventListener('click', (event) => event.target.closest('.lp-note') && video.pause());
+  ctx.onLeave(() => video.pause());
+  return h('section', { class: 'lp-film lp-wrap lp-reveal', 'aria-labelledby': 'lp-film' },
+    h('h2', { id: 'lp-film' }, t('lp_film_title')),
+    h('div', { class: 'lp-cinema' }, video, start));
+}
+
 /** A real diary sticker. Its code opens the demo, so it can be scanned from the screen. */
 const sticker = (name, className) => h('div', { class: `lp-sticker ${className || ''}`.trim() },
   h('span', { class: 'mast' }, h('img', { src: '/img/icon.svg', alt: '' }), 'Vidya Vaani'),
@@ -157,6 +179,6 @@ function reveals(ctx) {
 export function landing(ctx) {
   ctx.root.classList.add('lp');
   ctx.root.lang = languageOf('lp_intro');
-  add(ctx.root, header(), hero(ctx), steps(ctx), languages(), people(), village(), closing(), footer());
+  add(ctx.root, header(), hero(ctx), film(ctx), steps(ctx), languages(), people(), village(), closing(), footer());
   reveals(ctx);
 }

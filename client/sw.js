@@ -1,7 +1,7 @@
 // Offline shell, remembered diary pages and push notifications.
 // Pages and data are network first (always fresh when there is a network), vendor files cache first.
 
-const SHELL = 'vv-shell-v7';
+const SHELL = 'vv-shell-v8';
 const DATA = 'vv-data';
 const VENDOR = 'vv-vendor-v2';
 
@@ -56,6 +56,8 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
   if (request.method !== 'GET' || url.origin !== location.origin) return;
+  // The browser streams video in pieces by itself, and it is too big to keep for offline use.
+  if (url.pathname.endsWith('.mp4')) return;
   if (url.pathname.startsWith('/api/')) {
     if (!request.headers.has('range') && CACHEABLE_API.some((r) => r.test(url.pathname))) {
       event.respondWith(networkFirst(request, DATA));

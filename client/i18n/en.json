@@ -578,5 +578,7 @@
   "moved_toast": "{moved} moved, {left} left the school.",
   "move_one": "Move to another class",
   "move_now": "Move",
-  "nothing_to_move": "No child is chosen to move."
+  "nothing_to_move": "No child is chosen to move.",
+  "lp_film_title": "See it in 22 seconds",
+  "lp_film_play": "Watch the video"
 }

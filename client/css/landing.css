@@ -42,6 +42,22 @@ main.full { max-width: none; padding: 0; }
 .lp-note .note-text { min-height: 5.1em; font-size: 1.08rem; }
 .lp-caption { font-size: 0.92rem; color: var(--muted); }
 
+/* ---------- The film ---------- */
+
+.lp-film { display: flex; flex-direction: column; gap: var(--s5); padding-block: var(--s7); }
+.lp-cinema { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: var(--r); background: var(--hero); box-shadow: var(--float); aspect-ratio: 16 / 9; }
+.lp-cinema video { display: block; width: 100%; height: 100%; object-fit: cover; }
+/* The button sits in the quiet gap of the cover picture, clear of its words. */
+.lp-play { position: absolute; left: 7.4%; top: 67.5%; display: inline-flex; align-items: center; gap: var(--s3); min-height: 56px; padding: 0 var(--s5); border: 3px solid #fff; border-radius: var(--pill); background: var(--hero); color: var(--hero-ink); font: inherit; font-size: 1.1rem; font-weight: 700; white-space: nowrap; box-shadow: var(--float); transform: translateY(-50%); cursor: pointer; transition: transform var(--fast) var(--ease); }
+.lp-play:hover { transform: translateY(-50%) scale(1.04); }
+.lp-play:active { transform: translateY(-50%) scale(0.97); }
+/* On a small screen the gap is too thin, so the button takes the middle. */
+@media (max-width: 719px) {
+  .lp-play { left: 50%; top: 50%; min-height: 48px; padding: 0 var(--s4); font-size: 0.98rem; transform: translate(-50%, -50%); }
+  .lp-play:hover { transform: translate(-50%, -50%) scale(1.04); }
+  .lp-play:active { transform: translate(-50%, -50%) scale(0.97); }
+}
+
 /* Indian scripts have marks above and below the line, so headings in them need more room. */
 .lp:not(:lang(en)) :is(h1, h2, h3) { line-height: 1.28; letter-spacing: 0; }
 
