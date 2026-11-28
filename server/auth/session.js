@@ -26,35 +26,35 @@ const cookieOptions = (req, maxAgeMs, httpOnly) => ({
 
 const lifetime = () => config.sessionDays * 86_400_000;
 
-export function createSession(req, res, userId, portal = 'family') {
+export async function createSession(req, res, userId, portal = 'family') {
   const token = crypto.randomBytes(32).toString('base64url');
-  run(
+  await run(
     'INSERT INTO session (id, user_id, device_label, created_at, last_seen_at, expires_at, portal) VALUES (?,?,?,?,?,?,?)',
     sha256(token), userId, String(req.headers['user-agent'] || '').slice(0, 120), now(), now(), Date.now() + lifetime(), portal,
   );
   res.cookie(SESSION_COOKIE, token, cookieOptions(req, lifetime(), true));
 }
 
-export function destroySession(req, res) {
+export async function destroySession(req, res) {
   const token = readCookies(req)[SESSION_COOKIE];
-  if (token) run('DELETE FROM session WHERE id = ?', sha256(token));
+  if (token) await run('DELETE FROM session WHERE id = ?', sha256(token));
   res.clearCookie(SESSION_COOKIE, { path: '/' });
 }
 
-export function sessionMiddleware(req, res, next) {
+export async function sessionMiddleware(req, res, next) {
   const cookies = readCookies(req);
   const token = cookies[SESSION_COOKIE];
   req.user = null;
   if (token) {
-    const row = get(
-      `SELECT u.*, s.id AS session_id, s.last_seen_at, s.portal FROM session s JOIN user u ON u.id = s.user_id
+    const row = await get(
+      `SELECT u.*, s.id AS session_id, s.last_seen_at, s.portal FROM session s JOIN app_user u ON u.id = s.user_id
        WHERE s.id = ? AND s.expires_at > ?`,
       sha256(token), Date.now(),
     );
     if (row) {
       req.user = row;
       if (Date.now() - Date.parse(row.last_seen_at) > 3_600_000) {
-        run('UPDATE session SET last_seen_at = ? WHERE id = ?', now(), row.session_id);
+        await run('UPDATE session SET last_seen_at = ? WHERE id = ?', now(), row.session_id);
       }
     }
   }

@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
-import { run } from '../db/index.js';
+import { config } from '../config.js';
+import { get, run } from '../db/index.js';
 
 export class HttpError extends Error {
   constructor(status, code, extra) {
@@ -53,8 +54,8 @@ export const parseJson = (text, fallback) => {
   }
 };
 
-export function audit(actorUserId, action, { schoolId = null, entity = null, entityId = null, meta = null } = {}) {
-  run(
+export async function audit(actorUserId, action, { schoolId = null, entity = null, entityId = null, meta = null } = {}) {
+  await run(
     'INSERT INTO audit_log (actor_user_id, school_id, action, entity, entity_id, meta, created_at) VALUES (?,?,?,?,?,?,?)',
     actorUserId ?? null, schoolId, action, entity, entityId == null ? null : String(entityId),
     meta ? JSON.stringify(meta) : null, now(),
@@ -78,20 +79,47 @@ export function normalizeEmail(input) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
 }
 
-/** Small fixed-window limiter for sign-in and public routes. In memory: one container, one process. */
-export function limiter({ max, windowMs, key = (req) => req.ip }) {
+/** Counts one use in a window shared by every server. False once the limit is passed. */
+export async function allow(key, max, windowMs) {
+  const t = Date.now();
+  const floor = t - windowMs;
+  const row = await get(
+    `INSERT INTO throttle (key, window_start, hits) VALUES (?, ?, 1)
+     ON CONFLICT (key) DO UPDATE SET
+       hits = CASE WHEN throttle.window_start <= ? THEN 1 ELSE throttle.hits + 1 END,
+       window_start = CASE WHEN throttle.window_start <= ? THEN excluded.window_start ELSE throttle.window_start END
+     RETURNING hits`,
+    key, t, floor, floor,
+  );
+  return row.hits <= max;
+}
+
+/** Netlify passes the caller's address in its own header. */
+export const clientIp = (req) => (config.serverless && req.get('x-nf-client-connection-ip')) || req.ip;
+
+/**
+ * Fixed-window limiter. Sign-in and other sensitive routes pass a `name`, so the count lives in the
+ * database; busy harmless routes count in memory, per server.
+ */
+export function limiter({ name, max, windowMs, key = clientIp }) {
   const hits = new Map();
-  return (req, res, next) => {
+  return async (req, res, next) => {
     const k = key(req);
-    const t = Date.now();
-    const entry = hits.get(k);
-    if (!entry || t - entry.start > windowMs) {
-      if (hits.size > 5000) hits.clear();
-      hits.set(k, { start: t, count: 1 });
-      return next();
+    let ok;
+    if (name) {
+      ok = await allow(`${name}:${k}`, max, windowMs);
+    } else {
+      const t = Date.now();
+      let entry = hits.get(k);
+      if (!entry || t - entry.start > windowMs) {
+        if (hits.size > 5000) hits.clear();
+        entry = { start: t, count: 0 };
+        hits.set(k, entry);
+      }
+      entry.count += 1;
+      ok = entry.count <= max;
     }
-    entry.count += 1;
-    if (entry.count > max) return res.status(429).json({ error: 'too_many_requests' });
+    if (!ok) return res.status(429).json({ error: 'too_many_requests' });
     next();
   };
 }

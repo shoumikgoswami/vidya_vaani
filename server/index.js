@@ -5,10 +5,15 @@ import { startWorker, stopWorker } from './jobs/queue.js';
 import { startSchedules } from './jobs/reminders.js';
 import { vapidPublicKey } from './services/push.js';
 import { seedDemo } from './db/seed-demo.js';
-import { db } from './db/index.js';
+import { migrate, close } from './db/index.js';
 
-vapidPublicKey();
+await migrate();
+await vapidPublicKey();
+if (config.demoMode) await seedDemo().catch((error) => console.error('demo data failed:', error));
+
 const app = createApp();
+await startWorker();
+startSchedules();
 
 const server = app.listen(config.port, '0.0.0.0', () => {
   const on = (flag) => (flag ? 'on' : 'off');
@@ -16,19 +21,18 @@ const server = app.listen(config.port, '0.0.0.0', () => {
   console.log(
     `demo ${on(config.demoMode)} | Clerk ${on(config.clerk.enabled)} | NVIDIA ${on(config.nvidia.apiKey)} | OpenRouter ${on(config.openrouter.apiKey)}`,
   );
+  console.log(`database: ${config.databaseUrl.startsWith('postgres') ? 'hosted Postgres' : 'built in, in the data folder'}`);
 });
-
-startWorker();
-startSchedules();
-if (config.demoMode) seedDemo().catch((error) => console.error('demo data failed:', error));
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => {
     stopWorker();
-    server.close(() => {
-      db.close();
+    // Close the database cleanly even if a browser keeps a connection open.
+    server.closeAllConnections();
+    server.close(async () => {
+      await close().catch(() => {});
       process.exit(0);
     });
-    setTimeout(() => process.exit(0), 3000).unref();
+    setTimeout(() => process.exit(0), 5000).unref();
   });
 }

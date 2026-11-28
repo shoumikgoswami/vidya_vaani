@@ -1,6 +1,7 @@
 // Drafts the missing app strings with the configured model. Run on your computer, review, commit.
 //   npm run i18n:fill              every language
 //   npm run i18n:fill -- mr gu     only these
+import './memory-db.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';

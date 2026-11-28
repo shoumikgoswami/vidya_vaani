@@ -1,9 +1,7 @@
-// NVIDIA Magpie text-to-speech for Hindi and English, cached on disk.
+// NVIDIA Magpie text-to-speech for Hindi and English, cached in the database.
 // Every other case returns null and the browser's own voice takes over.
-import fs from 'node:fs';
-import path from 'node:path';
 import { config } from '../config.js';
-import { get, run } from '../db/index.js';
+import { saveMedia, loadMedia } from '../services/media.js';
 import { sha256 } from '../lib/util.js';
 import { lang } from '../../client/lib/languages.js';
 import { acquire, recordUsage, errorFromStatus } from './ratelimit.js';
@@ -24,7 +22,7 @@ async function listVoices() {
 
 export async function voiceFor(code) {
   const locale = MAGPIE_LOCALE[code];
-  voicePromise ||= listVoices().catch(() => []);
+  voicePromise ||= (await listVoices()).catch(() => []);
   const voices = await voicePromise;
   const tag = `.${locale.toUpperCase()}.`;
   const matching = voices.filter((v) => typeof v === 'string' && v.toUpperCase().includes(tag));
@@ -49,16 +47,14 @@ function toWav(buffer) {
   return Buffer.concat([header, buffer]);
 }
 
+/** The spoken text as WAV bytes, or null. */
 export async function synthesize(text, code) {
   if (!config.nvidia.apiKey || lang(code).tts !== 'magpie') return null;
   try {
     const voice = await voiceFor(code);
-    const hash = sha256(text);
-    const cached = get('SELECT audio_path FROM tts_cache WHERE lang = ? AND voice = ? AND text_hash = ?', code, voice, hash);
-    if (cached) {
-      const file = path.join(config.dataDir, cached.audio_path);
-      if (fs.existsSync(file)) return file;
-    }
+    const key = `tts/${code}-${sha256(`${voice}:${text}`).slice(0, 32)}`;
+    const cached = await loadMedia(key);
+    if (cached) return cached.data;
     if (!(await acquire('nvidia:magpie-tts', { maxWaitMs: 2000 }))) return null;
     const form = new FormData();
     form.set('text', text);
@@ -73,14 +69,13 @@ export async function synthesize(text, code) {
       signal: AbortSignal.timeout(config.timeouts.ttsMs),
     });
     if (!res.ok) {
-      recordUsage('nvidia:magpie-tts', errorFromStatus(res.status, 'synthesize failed'));
+      await recordUsage('nvidia:magpie-tts', errorFromStatus(res.status, 'synthesize failed'));
       return null;
     }
-    recordUsage('nvidia:magpie-tts');
-    const relative = path.join('tts', `${code}-${sha256(`${voice}:${text}`).slice(0, 32)}.wav`);
-    fs.writeFileSync(path.join(config.dataDir, relative), toWav(Buffer.from(await res.arrayBuffer())));
-    run('INSERT OR REPLACE INTO tts_cache (lang, voice, text_hash, audio_path) VALUES (?,?,?,?)', code, voice, hash, relative);
-    return path.join(config.dataDir, relative);
+    await recordUsage('nvidia:magpie-tts');
+    const audio = toWav(Buffer.from(await res.arrayBuffer()));
+    await saveMedia(key, { mime: 'audio/wav', data: audio });
+    return audio;
   } catch {
     return null;
   }

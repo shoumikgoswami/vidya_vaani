@@ -47,10 +47,10 @@ export async function chat(target, messages, { json = false, maxTokens = 1500, t
     const data = await res.json().catch(() => null);
     const content = data?.choices?.[0]?.message?.content;
     if (!content) throw new ProviderError(`${key} returned an empty answer`, 'down');
-    recordUsage(key);
+    await recordUsage(key);
     return content;
   } catch (error) {
-    recordUsage(key, error);
+    await recordUsage(key, error);
     throw error;
   }
 }

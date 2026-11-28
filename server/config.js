@@ -1,5 +1,4 @@
 // Every setting has a default, so the app starts with no .env file at all.
-import fs from 'node:fs';
 import path from 'node:path';
 
 export const ROOT = path.resolve(import.meta.dirname, '..');
@@ -20,6 +19,9 @@ export function loadConfig(env = process.env) {
   return {
     port,
     dataDir,
+    // Neon when set (Netlify's own database variable also works), otherwise the built-in database.
+    databaseUrl: str('DATABASE_URL') || str('NETLIFY_DATABASE_URL'),
+    serverless: bool('SERVERLESS', false),
     publicBaseUrl: str('PUBLIC_BASE_URL', `http://localhost:${port}`).replace(/\/+$/, ''),
     demoMode: bool('DEMO_MODE', true),
     trustProxy: bool('TRUST_PROXY', false),
@@ -60,6 +62,3 @@ export function loadConfig(env = process.env) {
 }
 
 export const config = loadConfig();
-
-fs.mkdirSync(path.join(config.dataDir, 'audio'), { recursive: true });
-fs.mkdirSync(path.join(config.dataDir, 'tts'), { recursive: true });

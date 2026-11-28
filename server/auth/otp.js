@@ -12,15 +12,15 @@ const MAX_ATTEMPTS = 5;
 
 export const otpLoginEnabled = () => config.demoMode && !config.clerk.enabled;
 
-export function sendOtp(phone) {
+export async function sendOtp(phone) {
   if (!otpLoginEnabled()) fail(404, 'otp_login_disabled');
   const t = Date.now();
-  const row = get('SELECT * FROM otp WHERE phone = ?', phone);
+  const row = await get('SELECT * FROM otp WHERE phone = ?', phone);
   const sameWindow = row && t - row.window_start < WINDOW_MS;
   if (sameWindow && row.sent_count >= MAX_SENDS) fail(429, 'otp_too_many_sends');
 
   const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
-  run(
+  await run(
     `INSERT INTO otp (phone, code_hash, expires_at, attempts, sent_count, window_start) VALUES (?,?,?,0,?,?)
      ON CONFLICT(phone) DO UPDATE SET code_hash = excluded.code_hash, expires_at = excluded.expires_at,
        attempts = 0, sent_count = excluded.sent_count, window_start = excluded.window_start`,
@@ -30,12 +30,18 @@ export function sendOtp(phone) {
   return code;
 }
 
-export function verifyOtp(phone, code) {
+export async function verifyOtp(phone, code) {
   if (!otpLoginEnabled()) fail(404, 'otp_login_disabled');
-  const row = get('SELECT * FROM otp WHERE phone = ?', phone);
-  if (!row || row.expires_at < Date.now()) fail(400, 'otp_expired');
-  if (row.attempts >= MAX_ATTEMPTS) fail(429, 'otp_too_many_attempts');
-  run('UPDATE otp SET attempts = attempts + 1 WHERE phone = ?', phone);
+  // Counting the attempt and reading the code in one step stops guesses sent all at once.
+  const row = await get(
+    'UPDATE otp SET attempts = attempts + 1 WHERE phone = ? AND expires_at >= ? AND attempts < ? RETURNING code_hash',
+    phone, Date.now(), MAX_ATTEMPTS,
+  );
+  if (!row) {
+    const current = await get('SELECT expires_at FROM otp WHERE phone = ?', phone);
+    if (!current || current.expires_at < Date.now()) fail(400, 'otp_expired');
+    fail(429, 'otp_too_many_attempts');
+  }
   if (row.code_hash !== sha256(`${phone}:${code}`)) fail(400, 'otp_wrong');
-  run('UPDATE otp SET expires_at = 0 WHERE phone = ?', phone);
+  await run('UPDATE otp SET expires_at = 0 WHERE phone = ?', phone);
 }

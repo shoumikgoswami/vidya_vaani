@@ -16,12 +16,12 @@ before(async () => {
   sunita = await app.client().login(DEMO.sunita);
   const { get } = app.db;
   ids = {
-    school: get('SELECT id FROM school WHERE is_demo = 1').id,
-    class5: get(`SELECT id FROM class WHERE name = '5'`).id,
-    class7: get(`SELECT id FROM class WHERE name = '7'`).id,
-    ravi: get(`SELECT id FROM student WHERE name = 'Ravi Kumar'`).id,
-    priya: get(`SELECT id FROM student WHERE name = 'Priya Sharma'`).id,
-    otherNote: get(`SELECT id FROM note WHERE class_id = (SELECT id FROM class WHERE name = '7')`).id,
+    school: (await get('SELECT id FROM school WHERE is_demo = 1')).id,
+    class5: (await get(`SELECT id FROM class WHERE name = '5'`)).id,
+    class7: (await get(`SELECT id FROM class WHERE name = '7'`)).id,
+    ravi: (await get(`SELECT id FROM student WHERE name = 'Ravi Kumar'`)).id,
+    priya: (await get(`SELECT id FROM student WHERE name = 'Priya Sharma'`)).id,
+    otherNote: (await get(`SELECT id FROM note WHERE class_id = (SELECT id FROM class WHERE name = '7')`)).id,
   };
 });
 
@@ -62,7 +62,7 @@ test('writes without the CSRF token are refused', async () => {
 });
 
 test('a scan alone gives nothing away', async () => {
-  const token = app.db.get('SELECT token FROM student WHERE id = ?', ids.ravi).token;
+  const token = (await app.db.get('SELECT token FROM student WHERE id = ?', ids.ravi)).token;
   assert.equal(token.length, 22);
   const res = await app.client().get(`/api/resolve/s/${token}`);
   assert.deepEqual(res.data, { access: 'login' });
@@ -131,14 +131,14 @@ test('re-sending an offline note does not create a duplicate', async () => {
   assert.equal(first.status, 201);
   assert.equal(again.status, 200);
   assert.equal(again.data.id, first.data.id);
-  assert.equal(app.db.get('SELECT COUNT(*) AS n FROM note WHERE client_uuid = ?', fields.client_uuid).n, 1);
+  assert.equal((await app.db.get('SELECT COUNT(*) AS n FROM note WHERE client_uuid = ?', fields.client_uuid)).n, 1);
 });
 
 test('only assigned teachers record, and only for their own students', async () => {
   const fields = { client_uuid: uuid(), recipients: 'class', duration_ms: 2000 };
   assert.equal((await meena.upload('/api/notes', app.noteForm({ ...fields, class_id: ids.class7 }))).status, 403);
   assert.equal((await admin.upload('/api/notes', app.noteForm({ ...fields, class_id: ids.class5 }))).status, 403);
-  const stranger = app.db.get('SELECT id FROM student WHERE class_id = ?', ids.class7).id;
+  const stranger = (await app.db.get('SELECT id FROM student WHERE class_id = ?', ids.class7)).id;
   const wrong = await meena.upload('/api/notes', app.noteForm({ ...fields, class_id: ids.class5, recipients: JSON.stringify([stranger]) }));
   assert.equal(wrong.data.error, 'recipients_invalid');
 });
@@ -187,7 +187,7 @@ test('students: add, duplicate warning across scripts, automatic and approved li
   assert.equal(duplicate.data.created.length, 0);
   assert.equal(duplicate.data.duplicates[0].existing[0].name, 'Ravi Kumar');
   const { id: studentId } = added.data.created[0];
-  const { token } = app.db.get('SELECT token FROM student WHERE id = ?', studentId);
+  const { token } = await app.db.get('SELECT token FROM student WHERE id = ?', studentId);
 
   const mother = await app.client().login('+919811122233');
   const mine = (await mother.get(`/api/resolve/s/${token}`)).data;
@@ -218,7 +218,7 @@ test('stickers print for managers only, and a rotated QR stops working', async (
   const sheet = await meena.get(`/api/classes/${ids.class5}/stickers`);
   assert.match(sheet.data.students[0].svg, /^<svg/);
   assert.equal((await sunita.get(`/api/classes/${ids.class5}/stickers`)).status, 403);
-  const old = app.db.get('SELECT token FROM student WHERE id = ?', ids.priya).token;
+  const old = (await app.db.get('SELECT token FROM student WHERE id = ?', ids.priya)).token;
   const rotated = await meena.post(`/api/students/${ids.priya}/rotate-token`, {});
   assert.notEqual(rotated.data.token, old);
   const dead = await meena.get(`/api/resolve/s/${old}`);
@@ -243,7 +243,7 @@ test('school settings and teachers belong to the admin', async () => {
 
 test('promotion moves 5A to 6A and old notes stay visible to parents', async () => {
   const before = (await sunita.get(`/api/children/${ids.ravi}/notes`)).data.notes.length;
-  const anjali = app.db.get(`SELECT id FROM student WHERE name = 'Anjali Nair'`).id;
+  const anjali = (await app.db.get(`SELECT id FROM student WHERE name = 'Anjali Nair'`)).id;
   const result = await admin.post(`/api/classes/${ids.class5}/promote`, {
     name: '6', section: 'A', year: '2030-31', decisions: { [anjali]: 'hold' },
   });
@@ -289,13 +289,13 @@ test('the setup wizard runs once, and demo switching never reaches a real accoun
   });
   assert.equal(made.status, 201);
   assert.equal((await guest.post('/api/setup', { schoolName: 'Second', adminName: 'Other', phone: '9855566678', defaultLang: 'hi', qrMode: 'per_student' })).status, 409);
-  const owner = app.db.get(`SELECT id FROM user WHERE phone = '+919855566677'`);
+  const owner = await app.db.get(`SELECT id FROM app_user WHERE phone = '+919855566677'`);
   assert.equal((await guest.post('/api/demo/login', { userId: owner.id })).status, 403);
 
   // A demo person who gains a real role is no longer open to demo sign-in.
-  const real = app.db.get('SELECT id FROM school WHERE is_demo = 0').id;
-  const meenaId = app.db.get('SELECT id FROM user WHERE phone = ?', DEMO.meena).id;
-  app.db.run(`INSERT INTO membership (user_id, school_id, role, created_at) VALUES (?,?, 'teacher', '2026')`, meenaId, real);
+  const real = (await app.db.get('SELECT id FROM school WHERE is_demo = 0')).id;
+  const meenaId = (await app.db.get('SELECT id FROM app_user WHERE phone = ?', DEMO.meena)).id;
+  await app.db.run(`INSERT INTO membership (user_id, school_id, role, created_at) VALUES (?,?, 'teacher', '2026')`, meenaId, real);
   assert.equal((await guest.post('/api/demo/login', { userId: meenaId })).status, 403);
 });
 
@@ -305,28 +305,28 @@ test('text-to-speech falls back to the phone voice without a key', async () => {
 
 test('a parent can delete their data', async () => {
   const bimal = await app.client().login(DEMO.bimal);
-  const userId = app.db.get('SELECT id FROM user WHERE phone = ?', DEMO.bimal).id;
+  const userId = (await app.db.get('SELECT id FROM app_user WHERE phone = ?', DEMO.bimal)).id;
   assert.equal((await bimal.post('/api/privacy/delete-request', { confirm: true })).status, 200);
-  assert.equal(app.db.get('SELECT COUNT(*) AS n FROM guardian_link WHERE user_id = ?', userId).n, 0);
-  assert.equal(app.db.get('SELECT COUNT(*) AS n FROM listen_receipt WHERE user_id = ?', userId).n, 0);
+  assert.equal((await app.db.get('SELECT COUNT(*) AS n FROM guardian_link WHERE user_id = ?', userId)).n, 0);
+  assert.equal((await app.db.get('SELECT COUNT(*) AS n FROM listen_receipt WHERE user_id = ?', userId)).n, 0);
   assert.equal((await bimal.get(`/api/children/${ids.ravi}/notes`)).status, 401);
 });
 
 test('a username-only account stays separate and is never linked automatically', async () => {
   const { userForIdentity } = await import('../server/auth/users.js');
-  const first = userForIdentity({ clerkUserId: 'user_a', name: 'asha_01' });
-  const second = userForIdentity({ clerkUserId: 'user_b', name: 'ravi_papa' });
+  const first = await userForIdentity({ clerkUserId: 'user_a', name: 'asha_01' });
+  const second = await userForIdentity({ clerkUserId: 'user_b', name: 'ravi_papa' });
   assert.notEqual(first.id, second.id);
-  assert.equal(userForIdentity({ clerkUserId: 'user_a' }).id, first.id);
+  assert.equal((await userForIdentity({ clerkUserId: 'user_a' })).id, first.id);
   assert.equal(first.phone, null);
-  assert.equal(app.db.get('SELECT COUNT(*) AS n FROM guardian_link WHERE user_id IN (?,?)', first.id, second.id).n, 0);
+  assert.equal((await app.db.get('SELECT COUNT(*) AS n FROM guardian_link WHERE user_id IN (?,?)', first.id, second.id)).n, 0);
 });
 
 test('the school office has its own sign-in', async () => {
   // A parent or teacher is turned away, and gets no session.
   const outsider = app.client();
   const sent = await outsider.post('/api/auth/otp/send', { phone: '9866677788' });
-  const real = app.db.get('SELECT id FROM school WHERE is_demo = 0');
+  const real = await app.db.get('SELECT id FROM school WHERE is_demo = 0');
   assert.ok(real, 'a school exists, so the first-run exception does not apply');
   const refused = await outsider.post('/api/auth/otp/verify', { phone: '9866677788', code: sent.data.demoCode, portal: 'school' });
   assert.equal(refused.status, 403);
@@ -356,6 +356,6 @@ test('a sample person who signs in by demo phone code stays in the demo switcher
 
 test('demo data can be reset', async () => {
   assert.equal((await app.client().post('/api/demo/reset', {})).status, 200);
-  assert.equal(app.db.get('SELECT COUNT(*) AS n FROM school WHERE is_demo = 1').n, 1);
-  assert.equal(app.db.get('SELECT COUNT(*) AS n FROM school WHERE is_demo = 0').n, 1);
+  assert.equal((await app.db.get('SELECT COUNT(*) AS n FROM school WHERE is_demo = 1')).n, 1);
+  assert.equal((await app.db.get('SELECT COUNT(*) AS n FROM school WHERE is_demo = 0')).n, 1);
 });

@@ -1,6 +1,7 @@
 // Day-1 model test (spec 5.4 and 16): which chat model to use, and whether speech works.
 //   docker compose exec app npm run models:test
 //   docker compose exec app npm run models:test -- model-a model-b      (compare other models)
+import './memory-db.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { config, ROOT } from '../server/config.js';
@@ -70,16 +71,16 @@ for (const target of chain) {
 
 lines.push('', '## Speech', '', '| Check | Result |', '|---|---|');
 if (config.nvidia.apiKey) {
-  const dir = path.join(config.dataDir, 'demo-audio');
+  const dir = path.join(ROOT, 'demo', 'audio');
   const clips = [['hi-homework', 'hi'], ['bn-exam', 'bn'], ['ta-science', 'ta'], ['or-uniform', 'te'], ['hi-fee', 'mr'], ['hi-homework', 'auto']];
   for (const [clip, code] of clips) {
     const file = path.join(dir, `${clip}.webm`);
     if (!fs.existsSync(file)) {
-      lines.push(`| ${clip} (${code}) | no clip; start the app once to create demo audio |`);
+      lines.push(`| ${clip} (${code}) | no clip; run scripts/make-demo-audio.js |`);
       continue;
     }
     try {
-      const result = await transcribe(file, { languageHint: code });
+      const result = await transcribe(fs.readFileSync(file), { languageHint: code });
       lines.push(`| ${clip} as ${code} | ${result.model}: ${result.text} |`);
     } catch (error) {
       lines.push(`| ${clip} as ${code} | FAILED: ${error.message} |`);
@@ -97,6 +98,7 @@ const report = `${lines.join('\n')}\n`;
 console.log(`\n\n${report}`);
 for (const target of [path.join(ROOT, 'docs', 'model-eval.md'), path.join(config.dataDir, 'model-eval.md')]) {
   try {
+    fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, report);
     console.log(`saved to ${target}`);
     break;

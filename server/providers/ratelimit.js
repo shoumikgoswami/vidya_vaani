@@ -28,12 +28,12 @@ export async function acquire(model, { maxWaitMs = Infinity, limit = config.rpmL
 
 export const resetRateLimits = () => calls.clear();
 
-export function recordUsage(model, error) {
+export async function recordUsage(model, error) {
   const is429 = error?.status === 429;
-  run(
+  await run(
     `INSERT INTO ai_usage (day, model, calls, errors_429, errors_other) VALUES (?,?,1,?,?)
-     ON CONFLICT(day, model) DO UPDATE SET calls = calls + 1,
-       errors_429 = errors_429 + excluded.errors_429, errors_other = errors_other + excluded.errors_other`,
+     ON CONFLICT (day, model) DO UPDATE SET calls = ai_usage.calls + 1,
+       errors_429 = ai_usage.errors_429 + excluded.errors_429, errors_other = ai_usage.errors_other + excluded.errors_other`,
     todayIst(), model, is429 ? 1 : 0, error && !is429 ? 1 : 0,
   );
 }

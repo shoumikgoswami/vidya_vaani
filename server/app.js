@@ -98,9 +98,9 @@ export function createApp() {
   app.use('/api', api);
 
   // Every other page is the single-page app.
-  app.get('/{*page}', (req, res, next) => {
+  app.get('/{*page}', async (req, res, next) => {
     if (path.extname(req.path) || req.path.startsWith('/vendor/')) return next();
-    sessionMiddleware(req, res, () => res.sendFile(path.join(ROOT, 'client', 'index.html'), { headers: { 'Cache-Control': 'no-cache' } }));
+    await sessionMiddleware(req, res, () => res.sendFile(path.join(ROOT, 'client', 'index.html'), { headers: { 'Cache-Control': 'no-cache' } }));
   });
 
   app.use((error, _req, res, _next) => {

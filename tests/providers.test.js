@@ -90,8 +90,8 @@ before(async () => {
     NVIDIA_TTS_MAGPIE_URL: `${llmBase}/tts`,
   });
   meena = await app.client().login(DEMO.meena);
-  raviId = app.db.get(`SELECT id FROM student WHERE name = 'Ravi Kumar'`).id;
-  classId = app.db.get(`SELECT id FROM class WHERE name = '5'`).id;
+  raviId = (await app.db.get(`SELECT id FROM student WHERE name = 'Ravi Kumar'`)).id;
+  classId = (await app.db.get(`SELECT id FROM class WHERE name = '5'`)).id;
 });
 
 after(async () => {
@@ -107,7 +107,7 @@ beforeEach(async () => {
   llm.calls.length = 0;
   llm.nvidiaStatus = 200;
   llm.junk = false;
-  app.db.run('DELETE FROM job');
+  await app.db.run('DELETE FROM job');
   (await import('../server/providers/ratelimit.js')).resetRateLimits();
 });
 
@@ -131,7 +131,7 @@ test('a Hindi note goes to Parakeet, is cleaned, tagged and translated in one ca
   assert.equal(call.authorization, 'Bearer nvapi-test');
   assert.ok(call.bytes > 30_000);
 
-  let note = noteRow(id);
+  let note = await noteRow(id);
   assert.equal(note.stt_provider, 'nvidia');
   assert.equal(note.stt_model, 'parakeet-1.1b-multilingual');
   assert.equal(note.llm_model, 'primary-model');
@@ -146,7 +146,7 @@ test('a Hindi note goes to Parakeet, is cleaned, tagged and translated in one ca
   await app.drain();
   assert.equal(llm.calls.length, 1, 'one call covers every language');
   assert.match(llm.calls[0].user, /⟦N1⟧/);
-  const english = app.db.get(`SELECT * FROM note_translation WHERE note_id = ? AND lang = 'en'`, id);
+  const english = await app.db.get(`SELECT * FROM note_translation WHERE note_id = ? AND lang = 'en'`, id);
   assert.match(english.text, /12/);
   assert.doesNotMatch(english.text, /⟦/);
   assert.equal(english.model, 'primary-model');
@@ -163,7 +163,7 @@ test('Tamil and Telugu use Whisper, and Odia stays as audio', async () => {
   asr.calls.length = 0;
   const odia = await record({ lang_hint: 'or' });
   assert.equal(asr.calls.length, 0);
-  assert.equal(noteRow(odia).status, 'audio_only');
+  assert.equal((await noteRow(odia)).status, 'audio_only');
 });
 
 test('re-transcribing runs the saved audio in the chosen language', async () => {
@@ -172,34 +172,34 @@ test('re-transcribing runs the saved audio in the chosen language', async () => 
   await meena.post(`/api/notes/${id}/retranscribe`, { lang: 'mr' });
   await app.drain();
   assert.equal(asr.calls[0].language_code, 'mr');
-  assert.equal(noteRow(id).transcript_lang, 'mr');
+  assert.equal((await noteRow(id)).transcript_lang, 'mr');
 });
 
 test('a rate limit queues the note and it completes later', async () => {
   asr.failWith = grpc.status.RESOURCE_EXHAUSTED;
   const id = await record({ browser_preview_text: 'कल कविता' });
-  let note = noteRow(id);
+  let note = await noteRow(id);
   assert.equal(note.status, 'transcribing');
   assert.equal(note.transcript_raw, 'कल कविता', 'the browser text shows meanwhile');
-  const job = app.db.get(`SELECT * FROM job WHERE type = 'process_note'`);
+  const job = await app.db.get(`SELECT * FROM job WHERE type = 'process_note'`);
   assert.equal(job.status, 'pending');
   assert.ok(job.run_after > Date.now());
 
   asr.failWith = null;
-  app.db.run('UPDATE job SET run_after = 0');
+  await app.db.run('UPDATE job SET run_after = 0');
   await app.drain();
-  note = noteRow(id);
+  note = await noteRow(id);
   assert.equal(note.status, 'ready');
   assert.equal(note.stt_provider, 'nvidia');
   assert.equal(note.transcript_raw, asr.text);
-  assert.ok(app.db.get('SELECT SUM(errors_429) AS n FROM ai_usage').n > 0);
+  assert.ok((await app.db.get('SELECT SUM(errors_429) AS n FROM ai_usage')).n > 0);
 });
 
 test('a bad key still saves the note with the browser text', async () => {
   asr.failWith = grpc.status.UNAUTHENTICATED;
   llm.nvidiaStatus = 401;
   const id = await record({ browser_preview_text: 'कल कविता याद करनी है' });
-  const note = noteRow(id);
+  const note = await noteRow(id);
   assert.equal(note.status, 'transcript_failed');
   assert.equal(note.transcript_raw, 'कल कविता याद करनी है');
   assert.equal(note.stt_provider, 'browser');
@@ -210,24 +210,24 @@ test('OpenRouter free models take over when NVIDIA is down', async () => {
   const id = await record();
   assert.deepEqual(llm.calls.map((c) => c.model), ['primary-model', 'second-model', 'free-model:free']);
   assert.equal(llm.calls[2].auth, 'Bearer or-test');
-  assert.equal(noteRow(id).llm_model, 'free-model:free');
+  assert.equal((await noteRow(id)).llm_model, 'free-model:free');
 });
 
 test('invalid model output is retried once per model, then the rules take over', async () => {
   llm.junk = true;
   const id = await record();
   assert.equal(llm.calls.length, 6);
-  const note = noteRow(id);
+  const note = await noteRow(id);
   assert.equal(note.status, 'ready');
   assert.equal(note.llm_model, null);
   assert.equal(note.transcript_clean, null);
-  const sources = app.db.all('SELECT source FROM note_tag WHERE note_id = ?', id).map((t) => t.source);
+  const sources = (await app.db.all('SELECT source FROM note_tag WHERE note_id = ?', id)).map((t) => t.source);
   assert.deepEqual([...new Set(sources)], ['rules']);
 });
 
 test('a respoken word replaces only that word', async () => {
   const id = await record();
-  const words = JSON.parse(noteRow(id).words);
+  const words = JSON.parse((await noteRow(id)).words);
   const index = words.findIndex((w) => w.w === '12');
   const original = asr.text;
   asr.text = '21';

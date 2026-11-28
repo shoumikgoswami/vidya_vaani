@@ -8,6 +8,10 @@ export async function startApp(env = {}) {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vv-test-'));
   Object.assign(process.env, {
     DATA_DIR: dataDir,
+    // Never the real database, whatever the shell or .env says.
+    DATABASE_URL: 'memory:',
+    NETLIFY_DATABASE_URL: '',
+    SERVERLESS: 'false',
     DEMO_MODE: 'true',
     TRUST_PROXY: 'true',
     PUBLIC_BASE_URL: 'http://localhost:3000',
@@ -85,7 +89,7 @@ export async function startApp(env = {}) {
   async function stop() {
     server.closeAllConnections();
     await new Promise((resolve) => server.close(resolve));
-    db.db.close();
+    await db.close();
     fs.rmSync(dataDir, { recursive: true, force: true });
   }
 
