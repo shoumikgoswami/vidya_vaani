@@ -1,14 +1,16 @@
 // S2 sign-in (Clerk, or the demo phone code) and the first-run wizard.
 import { h, add, icon, replace } from '../lib/dom.js';
 import { api, post } from '../lib/api.js';
-import { t, language } from '../lib/i18n.js';
+import { t, language, languageOf } from '../lib/i18n.js';
 import { store, signedIn, navigate, homeFor, refreshMe, loadClerk } from '../lib/state.js';
-import { guide, button, form, field, languageSelect, skeletons, failure, notice, errorText } from '../lib/ui.js';
+import { guide, button, form, field, languageSelect, skeletons, failure, notice, errorText, speakButton } from '../lib/ui.js';
+import { followAccountLanguage } from '../app-language.js';
 
 const safeNext = (next) => (next && next.startsWith('/') && !next.startsWith('//') ? next : null);
 
 async function afterSignIn(next) {
   await refreshMe();
+  await followAccountLanguage();
   store.config = await api('/config');
   sessionStorage.removeItem('vv.next.family');
   sessionStorage.removeItem('vv.next.school');
@@ -95,10 +97,45 @@ function demoPhoneLogin(ctx, portal, next) {
   return box;
 }
 
+/** Clerk's form drawn as part of our card: our colours and corners, no second frame or title. */
+function clerkAppearance() {
+  const css = getComputedStyle(document.documentElement);
+  const token = (name) => css.getPropertyValue(name).trim();
+  const flat = { boxShadow: 'none', border: 'none', borderRadius: '0', background: 'transparent' };
+  return {
+    variables: {
+      colorPrimary: token('--accent'),
+      colorPrimaryForeground: token('--accent-ink'),
+      colorBackground: token('--surface'),
+      colorForeground: token('--ink'),
+      colorMutedForeground: token('--muted'),
+      colorNeutral: token('--ink'),
+      colorInput: token('--surface'),
+      colorInputForeground: token('--ink'),
+      fontFamily: 'inherit',
+      fontSize: '0.95rem',
+      borderRadius: token('--r'),
+    },
+    elements: {
+      rootBox: { width: '100%' },
+      cardBox: { ...flat, width: '100%', maxWidth: '100%' },
+      // A hair of room, or the fields' outlines are cut off at the sides.
+      card: { ...flat, padding: '2px 3px', gap: '16px' },
+      header: { display: 'none' },
+      socialButtonsBlockButton: { minHeight: '52px', borderRadius: '999px' },
+      formButtonPrimary: {
+        minHeight: '52px', borderRadius: '999px', fontSize: '1rem', fontWeight: 650, boxShadow: 'none',
+        background: token('--accent'), color: token('--accent-ink'),
+      },
+      footer: { ...flat, backgroundImage: 'none', marginTop: '8px' },
+    },
+  };
+}
+
 async function clerkLogin(ctx, portal, next) {
-  const mount = h('div', { class: 'stack', style: 'align-items:center' });
+  const mount = h('div', { class: 'clerk-form' });
   const status = h('div', {}, skeletons(2, true));
-  add(ctx.root, guide('shield-check', 'login_clerk_guide'), status, mount);
+  add(ctx.root, status, mount);
   const here = portal === 'school' ? '/school/login' : '/login';
   let exchanged = false;
   try {
@@ -125,7 +162,7 @@ async function clerkLogin(ctx, portal, next) {
     };
     if (clerk.session) return exchange().catch(onError);
     const back = `${location.origin}${here}${next ? `?next=${encodeURIComponent(next)}` : ''}`;
-    clerk.mountSignIn(mount, { forceRedirectUrl: back, signUpForceRedirectUrl: back, withSignUp: true });
+    clerk.mountSignIn(mount, { forceRedirectUrl: back, signUpForceRedirectUrl: back, withSignUp: true, appearance: clerkAppearance() });
     const stop = clerk.addListener(() => exchange().catch(onError));
     ctx.onLeave(() => {
       stop?.();
@@ -143,22 +180,28 @@ async function signInPage(ctx, portal) {
   if (next) sessionStorage.setItem(key, next);
   if (signedIn() && store.me.portal === portal) return afterSignIn(next);
   ctx.root.classList.add('login');
-  add(ctx.root,
-    h('div', { class: 'portal' }, icon(office ? 'chalkboard-teacher' : 'users', { size: 32 }),
-      h('h1', {}, t(office ? 'school_login_title' : 'family_login_title'))),
-    office && h('p', { class: 'muted' }, t('school_login_guide')));
+  const guideKey = store.config.clerk && 'login_clerk_guide';
+  const spoken = [office && t('school_login_guide'), guideKey && t(guideKey)].filter(Boolean).join(' ');
+  // One card: who this door is for, what to do, and the form.
   const body = h('div', { class: 'stack' });
-  add(ctx.root, body);
+  add(ctx.root,
+    h('section', { class: 'card signin' },
+      h('div', { class: 'portal' }, h('span', { class: 'lead' }, icon(office ? 'chalkboard-teacher' : 'users', { size: 28 })),
+        h('h1', {}, t(office ? 'school_login_title' : 'family_login_title'))),
+      spoken && h('div', { class: 'row signin-guide' },
+        h('div', { class: 'grow' }, office && h('p', {}, t('school_login_guide')), guideKey && h('p', { class: 'muted' }, t(guideKey))),
+        speakButton(spoken, languageOf(guideKey || 'school_login_guide'))),
+      body),
+    h('div', { class: 'signin-links' },
+      office && store.config.setupNeeded && button(t('setup_title'), { iconName: 'plus', kind: 'outline block', href: '/setup' }),
+      button(t(office ? 'family_login_link' : 'school_login_link'), {
+        iconName: office ? 'users' : 'chalkboard-teacher', kind: 'quiet block', href: office ? '/login' : '/school/login',
+      }),
+      store.config.demoMode && button(t('demo_try'), { iconName: 'house', kind: 'quiet block', href: '/' })));
   const inner = { ...ctx, root: body };
   if (store.config.clerk) await clerkLogin(inner, portal, next);
   else if (store.config.otpLogin) add(body, demoPhoneLogin(ctx, portal, next));
   else add(body, notice('warning', [h('p', {}, t('auth_not_configured'))], 'bad'));
-  add(ctx.root,
-    office && store.config.setupNeeded && button(t('setup_title'), { iconName: 'plus', kind: 'outline block', href: '/setup' }),
-    button(t(office ? 'family_login_link' : 'school_login_link'), {
-      iconName: office ? 'users' : 'chalkboard-teacher', kind: 'block', href: office ? '/login' : '/school/login',
-    }),
-    store.config.demoMode && button(t('demo_try'), { iconName: 'house', kind: 'block', href: '/' }));
 }
 
 export const login = (ctx) => signInPage(ctx, 'family');
@@ -182,6 +225,7 @@ export function setup(ctx) {
     store.config = await api('/config');
     if (result.signedIn) {
       await refreshMe();
+      await followAccountLanguage();
       return navigate('/admin', { replace: true });
     }
     navigate('/school/login?next=/admin', { state: { phone: result.phone } });

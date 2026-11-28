@@ -35,6 +35,9 @@ export const LANGUAGES = [
   { code: 'ks', name: 'Kashmiri', native: 'کٲشُر', bcp47: 'ks-IN', tier: 'D', asr: [w('ur', true)], rtl: true, lowData: true },
 ];
 
+/** NVIDIA voices that speak both Hindi and English. A teacher picks one; the first is the default. */
+export const VOICES = ['Aria', 'Sofia', 'Isabela', 'Leo', 'Jason', 'Diego'];
+
 const byCode = new Map(LANGUAGES.map((l) => [l.code, l]));
 
 export const LANG_CODES = LANGUAGES.map((l) => l.code);

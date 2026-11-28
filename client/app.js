@@ -1,12 +1,12 @@
 // Boot, the router and the shell: demo banner, top bar and bottom tabs.
 import { h, icon, replace } from './lib/dom.js';
 import { api } from './lib/api.js';
-import { t, setLanguage, initialLanguage, hasChosenLanguage, language } from './lib/i18n.js';
+import { t, setLanguage, initialLanguage, language } from './lib/i18n.js';
 import { store, signedIn, refreshMe, currentRole, homeFor, navigate, roles, setRole, atSchoolOffice } from './lib/state.js';
 import { stopSpeaking } from './lib/speak.js';
 import * as outbox from './lib/outbox.js';
 import { skeletons, failure, languageSheet, nativeName, toast } from './lib/ui.js';
-import { chooseLanguage } from './app-language.js';
+import { chooseLanguage, followAccountLanguage } from './app-language.js';
 import './lib/install.js';
 import { home, help, demoSheet } from './views/home.js';
 import { login, schoolLogin, setup } from './views/auth.js';
@@ -91,7 +91,7 @@ function drawTopbar(route) {
     h('span', {}, 'Vidya Vaani', atSchoolOffice() && h('small', {}, t('school_signin'))));
   replace($('topbar'), h('div', { class: 'bar' },
     root ? brand : [back, h('span', { class: 'bar-title' }, route?.options.title ? t(route.options.title) : '')],
-    h('button', { type: 'button', class: 'langbtn', 'aria-label': t('app_language'), onclick: () => languageSheet(t('app_language'), language(), chooseLanguage) },
+    h('button', { type: 'button', class: 'langbtn', 'aria-label': t('preferred_language'), onclick: () => languageSheet(t('preferred_language'), language(), chooseLanguage) },
       icon('globe', { size: 20 }), h('span', {}, nativeName(language()))),
     signedIn() && h('a', { class: 'iconbtn', href: '/me', 'aria-label': t('me') }, icon('user'))));
 }
@@ -237,11 +237,7 @@ async function boot() {
   } catch (error) {
     return replace(main, failure(error, boot));
   }
-  // The person's own language, unless they chose one on this phone.
-  const preferred = store.me.user?.uiLang;
-  if (!hasChosenLanguage() && preferred && preferred !== language() && !store.me.user.isDemo) {
-    await setLanguage(preferred, { remember: false });
-  }
+  await followAccountLanguage();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch((e) => console.warn('service worker', e));
   await render(history.state || {});
   syncOutbox();

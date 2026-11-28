@@ -2,8 +2,9 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { get, all, run, update, tx } from '../db/index.js';
-import { parse, fail, intParam, parseJson, audit, now, allow } from '../lib/util.js';
+import { parse, fail, intParam, parseJson, audit, now, allow, limiter } from '../lib/util.js';
 import { requireUser } from '../auth/session.js';
+import { synthesize } from '../providers/tts.js';
 import { noteAccess, requireTeacherOfClass, linkedRecipients, loadClass } from '../auth/authorize.js';
 import { enqueue } from '../jobs/queue.js';
 import { markUncertain, pushNewNote } from '../jobs/handlers.js';
@@ -14,7 +15,7 @@ import { lexicon } from '../nlp/text.js';
 import { isLang, LANG_CODES } from '../../client/lib/languages.js';
 import {
   audioUpload, noteFields, createNote, publishNote, presentNote, summariseAll, recipientsByNote, recipientsOf, setTags, shownText,
-  heardSummary, translationOf, saveTranslation, hasPendingJob,
+  heardSummary, translationOf, saveTranslation, translateWhenAsked,
 } from '../services/notes.js';
 import { loadMedia, sendAudio } from '../services/media.js';
 import { aiAllowed } from '../services/demo-budget.js';
@@ -32,8 +33,9 @@ async function editable(user, id) {
   return note;
 }
 
+/** One preferred language: what the app is showing, then the account's, then the one given at linking. */
 function readingLanguage(user, links) {
-  return links?.[0]?.read_lang || user.ui_lang || 'en';
+  return user.ui_lang || links?.[0]?.read_lang || 'en';
 }
 
 router.post('/notes', audioUpload, async (req, res) => {
@@ -58,14 +60,6 @@ router.get('/notes/:id', async (req, res) => {
   const { note, as, links } = await noteAccess(req.user, intParam(req.params.id));
   const asked = req.query.lang && isLang(req.query.lang) ? req.query.lang : null;
   const viewLang = asked || readingLanguage(req.user, links);
-  const source = shownText(note);
-
-  // A language nobody needed yet is translated the first time someone asks (spec 5.5).
-  if (note.published_at && source && viewLang !== note.transcript_lang && !await translationOf(note.id, viewLang)) {
-    const queued = await hasPendingJob('translate_note', note.id);
-    if (!queued) await enqueue('translate_note', { noteId: note.id, langs: [...new Set([viewLang, 'en'])] });
-  }
-
   const forTeacher = as !== 'parent';
   const answers = await all(
     `SELECT * FROM note WHERE parent_note_id = ? AND published_at IS NOT NULL ORDER BY created_at`, note.id,
@@ -76,6 +70,7 @@ router.get('/notes/:id', async (req, res) => {
     const allowed = await noteAccess(req.user, reply.id).then(() => true, () => false);
     if (allowed) replies.push(reply);
   }
+  await translateWhenAsked([note, ...replies], viewLang);
 
   res.json({
     ...await presentNote(note, { viewLang, forTeacher }),
@@ -83,6 +78,18 @@ router.get('/notes/:id', async (req, res) => {
     myChildren: links?.map((l) => ({ studentId: l.student_id, name: l.student_name })),
     replies: await Promise.all(replies.map(async (r) => ({ ...await presentNote(r, { viewLang }), mine: r.author_user_id === req.user.id }))),
   });
+});
+
+/** A translated note in the teacher's chosen voice. 204 hands the job to the phone's own voice. */
+router.get('/notes/:id/speech/:lang', limiter({ max: 60, windowMs: 60_000 }), async (req, res) => {
+  const { note } = await noteAccess(req.user, intParam(req.params.id));
+  const code = LANG_CODES.includes(req.params.lang) ? req.params.lang : fail(404, 'language_unknown');
+  const translation = await translationOf(note.id, code);
+  if (!translation) return res.status(204).end();
+  const author = await get('SELECT voice FROM app_user WHERE id = ?', note.author_user_id);
+  const audio = await synthesize(translation.text, code, { voice: author?.voice, mp3: true, noteId: note.id });
+  if (!audio) return res.status(204).end();
+  sendAudio(req, res, { mime: 'audio/mpeg', data: audio }, { maxAge: 86_400 });
 });
 
 router.get('/notes/:id/status', async (req, res) => {

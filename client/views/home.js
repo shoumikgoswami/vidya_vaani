@@ -4,6 +4,7 @@ import { api, post } from '../lib/api.js';
 import { t, languageOf } from '../lib/i18n.js';
 import { store, signedIn, navigate, homeFor, refreshMe, setRole } from '../lib/state.js';
 import { installCard } from '../lib/install.js';
+import { followAccountLanguage, forgetPickedLanguage } from '../app-language.js';
 import { guide, button, sheet, avatar, skeletons, showError, speakButton, toast, reveal } from '../lib/ui.js';
 
 const roleLabel = (p) => (p.role === 'parent' ? t('parent_of', { child: p.child.split(' ')[0] }) : t(`role_${p.role}`));
@@ -13,6 +14,8 @@ export async function actAs(persona) {
   await window.caches?.delete('vv-data');
   setRole(persona.role);
   await refreshMe();
+  forgetPickedLanguage();
+  await followAccountLanguage();
   navigate(homeFor(persona.role), { state: { switched: true } });
 }
 

@@ -21,8 +21,6 @@ export function initialLanguage() {
   return isLang(device) ? device : 'en';
 }
 
-export const hasChosenLanguage = () => Boolean(localStorage.getItem('vv.lang'));
-
 export async function setLanguage(code, { remember = true } = {}) {
   current = isLang(code) ? code : 'en';
   [english, table] = await Promise.all([load('en'), load(current)]);

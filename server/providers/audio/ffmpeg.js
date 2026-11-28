@@ -33,6 +33,20 @@ async function ffmpegPath() {
 
 export const ffmpeg = async (args) => exec(await ffmpegPath(), ['-hide_banner', '-loglevel', 'error', '-y', ...args], { timeout: 60_000 });
 
+/** Spoken translations are kept as MP3: every phone plays it, and a long note stays small. */
+export async function toMp3(wav) {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'vv-'));
+  const input = path.join(dir, 'in.wav');
+  const out = path.join(dir, 'out.mp3');
+  try {
+    await fs.writeFile(input, wav);
+    await ffmpeg(['-i', input, '-vn', '-ac', '1', '-c:a', 'libmp3lame', '-b:a', '48k', out]);
+    return await fs.readFile(out);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+}
+
 /** Takes the uploaded recording as bytes; ffmpeg works on short-lived temporary files. */
 export async function toAsrAudio(recording, { maxSeconds = 125 } = {}) {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'vv-'));

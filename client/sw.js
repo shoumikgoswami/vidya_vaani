@@ -1,7 +1,7 @@
 // Offline shell, remembered diary pages and push notifications.
 // Pages and data are network first (always fresh when there is a network), vendor files cache first.
 
-const SHELL = 'vv-shell-v4';
+const SHELL = 'vv-shell-v5';
 const DATA = 'vv-data';
 const VENDOR = 'vv-vendor-v2';
 
@@ -14,7 +14,7 @@ const SHELL_FILES = [
     .map((n) => `/views/${n}.js`),
 ];
 
-const CACHEABLE_API = [/^\/api\/(config|me|inbox|drafts)$/, /^\/api\/classes(\/\d+(\/students)?)?$/, /^\/api\/children\/\d+\/(notes|summary)$/, /^\/api\/notes\/\d+(\/audio)?$/];
+const CACHEABLE_API = [/^\/api\/(config|me|inbox|drafts)$/, /^\/api\/classes(\/\d+(\/students)?)?$/, /^\/api\/children\/\d+\/(notes|summary)$/, /^\/api\/notes\/\d+(\/audio|\/speech\/[a-z]+)?$/];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(SHELL).then((c) => c.addAll(SHELL_FILES)).then(() => self.skipWaiting()));

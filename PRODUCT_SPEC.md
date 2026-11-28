@@ -40,6 +40,9 @@ These override v2.1 and the sections below where they differ.
 | Appearance (4) | Followed the phone | **Light by default**; each person can choose dark under Me |
 | AI status (5.7, S11) | In school settings and reports, with key warnings elsewhere | One office **Configuration** screen. Teachers, parents and other office screens show no keys, models or service names |
 | Sample notes (15) | Tamil, Hindi and Bengali recordings | **Hindi and English** recordings in NVIDIA's natural voice; parents still read Tamil, Telugu and Bengali translations |
+| Languages (J4, S10) | App language, a reading language per child, and a translation/original switch | **One preferred language** for screens, note text and note sound |
+| Note playback (5.7, S10) | The teacher's recording first, plus a read-aloud button on the translation | **One play button.** In the teacher's language it plays the recording; otherwise it speaks the translation (NVIDIA for Hindi and English, else the phone's voice). A small link still plays the original |
+| Voices (5.7) | One default voice | Each teacher picks a voice (Aria by default) for translated notes. English words in Hindi are written in Devanagari before they are spoken |
 
 ---
 

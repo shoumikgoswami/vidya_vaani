@@ -1,11 +1,13 @@
-// The "Me" screen: language, role, notifications, privacy and sign-out.
+// The "Me" screen: preferred language, a teacher's voice, role, notifications, privacy and sign-out.
 import { h, add, icon } from '../lib/dom.js';
 import { post, patch } from '../lib/api.js';
-import { t, language, languageOf } from '../lib/i18n.js';
-import { store, roles, currentRole, setRole, navigate, homeFor, logout, refreshMe } from '../lib/state.js';
+import { t, language, languageOf, phrase } from '../lib/i18n.js';
+import { store, roles, currentRole, setRole, navigate, homeFor, logout, refreshMe, membershipFor } from '../lib/state.js';
 import {
   button, avatar, languageSheet, nativeName, confirmSheet, toast, speakButton, showError, segmented,
 } from '../lib/ui.js';
+import { speak, stopSpeaking } from '../lib/speak.js';
+import { VOICES } from '../lib/languages.js';
 import { chooseLanguage } from '../app-language.js';
 import { consentPoints, consentText } from './consent.js';
 import { enablePush, pushState } from '../lib/push.js';
@@ -15,6 +17,39 @@ const row = (glyph, title, detail, onClick) =>
   h('button', { type: 'button', class: 'item', onclick: onClick }, h('span', { class: 'lead' }, icon(glyph)),
     h('span', { class: 'grow' }, h('strong', {}, title), detail && h('span', { class: 'muted small' }, detail)),
     icon('caret-right', { flip: true }));
+
+/** The voice that speaks this teacher's notes to families in Hindi and English. */
+function voicePicker() {
+  // Samples are in the preferred language where the voices speak it.
+  const sampleLang = ['hi', 'en'].includes(language()) ? language() : 'en';
+  let chosen = store.me.user.voice;
+  const rows = VOICES.map((name) => {
+    const pick = h('button', { type: 'button', class: 'voice-pick', 'aria-pressed': String(name === chosen) },
+      h('span', { class: 'mark', 'aria-hidden': 'true' }, icon('check', { size: 18 })), h('strong', { lang: 'en' }, name));
+    pick.addEventListener('click', async () => {
+      try {
+        await patch('/me', { voice: name });
+        chosen = name;
+        for (const other of rows) other.pick.setAttribute('aria-pressed', String(other.name === chosen));
+        await refreshMe();
+        toast(t('voice_saved', { name }));
+      } catch (error) {
+        showError(error);
+      }
+    });
+    const listen = h('button', {
+      type: 'button', class: 'iconbtn soft', 'aria-label': t('listen_to', { name }),
+      onclick: async () => {
+        stopSpeaking();
+        const sample = await phrase(sampleLang, 'voice_sample');
+        if (!(await speak(sample.text, sample.lang, { voice: name }))) toast(t('no_voice'));
+      },
+    }, icon('speaker-high'));
+    return { name, pick, el: h('li', { class: 'voice-row' }, pick, listen) };
+  });
+  return h('div', { class: 'section' }, h('h2', {}, t('your_voice')), h('p', { class: 'muted' }, t('voice_help')),
+    h('ul', { class: 'list' }, rows.map((r) => r.el)));
+}
 
 export function account(ctx) {
   const { user, children } = store.me;
@@ -28,11 +63,7 @@ export function account(ctx) {
         navigate(homeFor(r));
       })),
     h('div', { class: 'list' },
-    row('globe', t('app_language'), nativeName(language()), () => languageSheet(t('app_language'), language(), chooseLanguage)),
-    children.filter((c) => c.status === 'active').map((c) => row(
-      'translate', t('notes_for_child', { child: c.name }), nativeName(c.readLang || user.uiLang || 'en'),
-      () => languageSheet(t('read_in'), c.readLang, (code) =>
-        patch(`/links/${c.linkId}`, { readLang: code }).then(refreshMe).then(() => navigate('/me', { replace: true })).catch(showError)))),
+    row('globe', t('preferred_language'), nativeName(language()), () => languageSheet(t('preferred_language'), language(), chooseLanguage)),
     pushState() === 'default' && row('bell', t('allow_notifications'), null, async () => {
       const result = await enablePush(store.config.vapidPublicKey);
       toast(t(result === 'granted' ? 'notifications_on' : 'notifications_off'));
@@ -46,6 +77,7 @@ export function account(ctx) {
       : store.me.memberships.some((m) => m.role === 'admin')
         ? row('chalkboard-teacher', t('school_signin'), null, () => navigate('/school/login')) : null,
     row('info', t('help_title'), null, () => navigate('/help'))),
+    store.me.portal !== 'school' && membershipFor('teacher') && voicePicker(),
     h('div', { class: 'section' }, h('h2', {}, t('appearance')),
       segmented([['light', t('theme_light')], ['dark', t('theme_dark')]], window.vvTheme.current(), window.vvTheme.set)),
     children.length > 0 && h('details', { class: 'card' },

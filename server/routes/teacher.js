@@ -16,9 +16,12 @@ import { enqueue } from '../jobs/queue.js';
 import { pushNewNote } from '../jobs/handlers.js';
 import { completeJson, llmAvailable } from '../providers/llm.js';
 import { aiAllowedFor } from '../services/demo-budget.js';
+import { LANG_CODES } from '../../client/lib/languages.js';
 import { brandedQr } from '../services/qr.js';
 import { transcribe } from '../providers/asr.js';
-import { audioUpload, summarise, summariseAll, heardByNote, recipientsByNote, recipientsOf, presentNote } from '../services/notes.js';
+import {
+  audioUpload, summarise, summariseAll, heardByNote, recipientsByNote, recipientsOf, presentNote, translationsByNote, translateWhenAsked,
+} from '../services/notes.js';
 
 export const router = Router();
 router.use(['/classes', '/students', '/qr', '/approvals', '/inbox', '/formfill', '/school-qr'], requireUser);
@@ -74,9 +77,14 @@ router.get('/classes/:id', async (req, res) => {
     cls.id, req.user.id, isClassTeacher ? 1 : 0,
   );
   const ids = rows.map((n) => n.id);
-  const [summaries, heard, names] = await Promise.all([summariseAll(rows), heardByNote(ids), recipientsByNote(ids)]);
+  const viewLang = LANG_CODES.includes(req.query.lang) ? req.query.lang : req.user.ui_lang || 'en';
+  await translateWhenAsked(rows.slice(0, 5), viewLang);
+  const [summaries, heard, names, translations] = await Promise.all([
+    summariseAll(rows), heardByNote(ids), recipientsByNote(ids), translationsByNote(ids, viewLang),
+  ]);
   const notes = summaries.map((n) => ({
     ...n, heard: heard.get(n.id) || { total: 0, heard: 0 }, recipients: (names.get(n.id) || []).map((r) => r.name),
+    shown: (n.lang !== viewLang && translations.get(n.id)?.text) || n.text,
   }));
   res.json({
     class: { id: cls.id, name: cls.name, section: cls.section, academicYear: cls.academic_year, teaches, isClassTeacher },
@@ -230,7 +238,7 @@ router.post('/approvals/:linkId', async (req, res) => {
 
 /* ---------- Voice inbox ---------- */
 
-async function inboxFor(userId, classIds) {
+async function inboxFor(userId, classIds, asked) {
   const replies = [];
   for (const classId of classIds) {
     const cls = await get('SELECT * FROM class WHERE id = ?', classId);
@@ -242,10 +250,12 @@ async function inboxFor(userId, classIds) {
       classId, userId, cls.class_teacher_id === teaching.id ? 1 : 0,
     );
     const me = await get('SELECT ui_lang FROM app_user WHERE id = ?', userId);
+    const viewLang = asked || me.ui_lang || teaching.speak_lang || 'en';
+    await translateWhenAsked(rows, viewLang);
     for (const note of rows) {
       const original = note.parent_note_id && await get('SELECT * FROM note WHERE id = ?', note.parent_note_id);
       replies.push({
-        ...await presentNote(note, { viewLang: me.ui_lang || teaching.speak_lang || 'en' }),
+        ...await presentNote(note, { viewLang }),
         student: (await recipientsOf(note.id))[0] || null,
         about: original ? (await summarise(original)).text.slice(0, 80) : null,
         heard: Boolean(await get('SELECT 1 FROM listen_receipt WHERE note_id = ? AND user_id = ?', note.id, userId)),
@@ -261,7 +271,8 @@ router.get('/inbox', async (req, res) => {
   for (const m of (await membershipsFor(req.user.id)).filter((x) => x.role === 'teacher')) {
     for (const c of await visibleClasses(req.user, m.school_id)) if (c.teaches) classIds.add(c.id);
   }
-  res.json({ replies: await inboxFor(req.user.id, [...classIds]) });
+  const asked = LANG_CODES.includes(req.query.lang) ? req.query.lang : null;
+  res.json({ replies: await inboxFor(req.user.id, [...classIds], asked) });
 });
 
 router.get('/classes/:id/inbox', async (req, res) => {

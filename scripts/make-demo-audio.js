@@ -16,8 +16,8 @@ const key = process.env.NVIDIA_API_KEY?.trim();
 const magpie = (process.env.NVIDIA_TTS_MAGPIE_URL?.trim() || 'https://877104f7-e885-42b9-8de8-f6e4c6303969.invocation.api.nvcf.nvidia.com')
   .replace(/\/+$/, '');
 const LOCALES = { hi: 'hi-IN', en: 'en-US' };
-/** One voice for each person, so every speaker sounds like someone else. */
-const VOICES = { meena: 'Aria', sunita: 'Isabela', arjun: 'Leo', lakshmi: 'Sofia.Calm' };
+/** Teachers record in the voice they have chosen in the sample school; the parent has her own. */
+const VOICES = { ...Object.fromEntries(data.people.filter((p) => p.voice).map((p) => [p.key, p.voice])), sunita: 'Isabela' };
 if (!key) throw new Error('Set NVIDIA_API_KEY (in .env) first.');
 
 async function speak(sample, file) {

@@ -8,13 +8,17 @@ import { startApp, uuid, DEMO } from './helpers/app.js';
 
 const asr = { calls: [], failWith: null, text: 'रवि, कल page 12 की कविता याद करनी है।' };
 const llm = { calls: [], systems: [], nvidiaStatus: 200, junk: false };
-const tts = { calls: [] };
+const tts = { calls: [], forms: [] };
 
 const answerFor = (body) => {
   llm.systems.push(body.messages[0].content);
   const prompt = body.messages[0].content;
   const user = body.messages[1].content;
   if (llm.junk) return 'sorry, I cannot do that';
+  if (prompt.includes('in Devanagari')) {
+    // "Zzz" is answered in the wrong script, which must not be used.
+    return JSON.stringify(Object.fromEntries(JSON.parse(user).map((w) => [w, w === 'Zzz' ? 'zzz' : 'कविश'])));
+  }
   if (prompt.includes('You translate short notes')) {
     const note = user.split('Note:\n')[1];
     const codes = [...user.split('Target languages: ')[1].split('\n')[0].matchAll(/(\w+) \(/g)].map((m) => m[1]);
@@ -48,8 +52,9 @@ before(async () => {
         tts.calls.push(req.url);
         if (req.url.endsWith('/list_voices')) {
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          return res.end(JSON.stringify({ 'hi-IN': { voices: ['Magpie-Multilingual.HI-IN.Aria'] } }));
+          return res.end(JSON.stringify({ 'hi-IN': { voices: ['Magpie-Multilingual.HI-IN.Aria', 'Magpie-Multilingual.HI-IN.Leo'] } }));
         }
+        tts.forms.push(raw);
         res.writeHead(200, { 'Content-Type': 'application/octet-stream' });
         return res.end(Buffer.alloc(4000));
       }
@@ -266,6 +271,66 @@ test('Hindi is read aloud in the NVIDIA voice, once, and then from the cache', a
   assert.equal(first.data.subarray(0, 4).toString(), 'RIFF');
   assert.equal((await meena.get(url)).status, 200);
   assert.deepEqual(tts.calls, ['/tts/v1/audio/list_voices', '/tts/v1/audio/synthesize']);
+});
+
+test('English words are written in Devanagari before Hindi is spoken', async () => {
+  const { toHindiSpeech } = await import('../server/nlp/speech-hi.js');
+  const school = await toHindiSpeech('रवि को Science का Homework है: page 24, Class 5A.');
+  assert.equal(school.text, 'रवि को साइंस का होमवर्क है: पेज 24, क्लास 5ए.');
+  assert.equal(school.complete, true);
+  assert.equal(llm.calls.length, 0, 'school words need no AI call');
+
+  const named = await toHindiSpeech("Kavish की parents' meeting");
+  assert.equal(named.text, 'कविश की पेरेंट्स मीटिंग');
+  assert.equal(llm.calls.length, 1);
+  await toHindiSpeech('Kavish आया');
+  assert.equal(llm.calls.length, 1, 'a word is asked about once');
+
+  const odd = await toHindiSpeech('Zzz आया');
+  assert.deepEqual(odd, { text: 'Zzz आया', complete: false });
+});
+
+test('a translated note is spoken in the teacher\'s voice, as MP3, and kept', async () => {
+  const sunita = await app.client().login(DEMO.sunita);
+  const note = await app.db.get(`SELECT id, author_user_id FROM note WHERE client_uuid LIKE 'demo-en-science-%'`);
+  const seen = (await sunita.get(`/api/notes/${note.id}?lang=hi`)).data;
+  assert.match(seen.speechUrl, new RegExp(`^/api/notes/${note.id}/speech/hi`));
+
+  tts.forms.length = 0;
+  const audio = await sunita.get(seen.speechUrl);
+  assert.equal(audio.status, 200);
+  assert.equal(audio.headers.get('content-type'), 'audio/mpeg');
+  assert.equal(tts.forms.length, 1);
+  assert.match(tts.forms[0], /HI-IN\.Aria/);
+  assert.match(tts.forms[0], /साइंस/);
+  assert.doesNotMatch(tts.forms[0], /Science/);
+  assert.equal((await sunita.get(seen.speechUrl)).status, 200);
+  assert.equal(tts.forms.length, 1, 'the second play comes from the database');
+
+  const lakshmi = await app.client().login(DEMO.lakshmi);
+  assert.equal((await lakshmi.patch('/api/me', { voice: 'Leo' })).status, 200);
+  assert.equal((await lakshmi.patch('/api/me', { voice: 'Nobody' })).status, 400);
+  assert.equal((await lakshmi.get('/api/me')).data.user.voice, 'Leo');
+  const changed = (await sunita.get(`/api/notes/${note.id}?lang=hi`)).data;
+  assert.notEqual(changed.speechUrl, seen.speechUrl, 'a new voice is a new address');
+  assert.equal((await sunita.get(changed.speechUrl)).status, 200);
+  assert.match(tts.forms[1], /HI-IN\.Leo/);
+
+  // Someone else's note stays private, and a language without a voice is the phone's job.
+  const other = await app.db.get(`SELECT id FROM note WHERE client_uuid LIKE 'demo-hi-exam-%'`);
+  assert.equal((await sunita.get(`/api/notes/${other.id}/speech/hi`)).status, 403);
+  assert.equal((await sunita.get(`/api/notes/${note.id}/speech/ta`)).status, 204);
+  await lakshmi.patch('/api/me', { voice: 'Aria' });
+});
+
+test('long notes are spoken a few sentences at a time, with nothing lost', async () => {
+  const { pieces } = await import('../server/providers/tts.js');
+  const text = Array.from({ length: 60 }, (_x, i) => `वाक्य ${i} यहाँ पूरा होता है।`).join(' ');
+  const parts = pieces(text);
+  assert.ok(parts.length > 1);
+  assert.ok(parts.every((p) => p.length <= 900));
+  assert.equal(parts.join(' '), text);
+  assert.deepEqual(pieces('a'.repeat(2000)).map((p) => p.length), [900, 900, 200]);
 });
 
 test('the limiter holds calls back once the per-minute budget is spent', async () => {

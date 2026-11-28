@@ -88,6 +88,25 @@ test('cross-language sample: English audio with a Hindi translation', async () =
   assert.ok(audio.data.length > 500);
 });
 
+test('one preferred language drives the diary and the note', async () => {
+  const me = (await sunita.get('/api/me')).data;
+  assert.equal(me.user.uiLang, 'hi');
+  assert.equal(me.user.voice, 'Aria');
+  // The language the app is showing wins, and then the account's, over the one given at linking.
+  await sunita.patch('/api/me', { uiLang: 'ta' });
+  const diary = (await sunita.get(`/api/children/${ids.ravi}/notes`)).data;
+  assert.equal(diary.readLang, 'ta');
+  const science = diary.notes.find((n) => n.lang === 'en' && n.tags.some((t) => t.type === 'homework'));
+  assert.equal(science.viewLang, 'ta');
+  assert.equal(science.translation.lang, 'ta');
+  assert.equal(science.speechUrl, null, 'without a key the phone speaks');
+  assert.equal((await sunita.get(`/api/notes/${science.id}`)).data.viewLang, 'ta');
+  assert.equal((await sunita.get(`/api/notes/${science.id}?lang=en`)).data.translation, null);
+  assert.equal((await sunita.get(`/api/children/${ids.ravi}/notes?lang=te`)).data.readLang, 'te');
+  assert.equal((await sunita.get(`/api/notes/${science.id}/speech/hi`)).status, 204);
+  await sunita.patch('/api/me', { uiLang: 'hi' });
+});
+
 test('a teacher note without a key keeps the browser text and finds tags and dates', async () => {
   const lakshmi = await app.client().login(DEMO.lakshmi);
   const id = await record(lakshmi, {

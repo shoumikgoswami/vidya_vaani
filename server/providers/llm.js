@@ -72,14 +72,14 @@ export function extractJson(text) {
  * Asks the chain for JSON that satisfies a zod schema. Each model gets one stricter retry on
  * invalid output. Throws a ProviderError; `.transient` says whether a later retry makes sense.
  */
-export async function completeJson({ system, user, schema, maxTokens, chain = llmChain() }) {
+export async function completeJson({ system, user, schema, maxTokens, timeoutMs, chain = llmChain() }) {
   if (!chain.length) throw new ProviderError('no AI key set', 'auth');
   let worst = new ProviderError('every model failed', 'bad');
   for (const target of chain) {
     const messages = [{ role: 'system', content: system }, { role: 'user', content: user }];
     try {
       for (let attempt = 0; attempt < 2; attempt += 1) {
-        const answer = await chat(target, messages, { json: true, maxTokens });
+        const answer = await chat(target, messages, { json: true, maxTokens, timeoutMs });
         const checked = schema.safeParse(extractJson(answer));
         if (checked.success) return { data: checked.data, provider: target.provider, model: target.model };
         messages.push(

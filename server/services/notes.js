@@ -3,8 +3,8 @@ import multer from 'multer';
 import { z } from 'zod';
 import { config } from '../config.js';
 import { get, all, run, insert, update, tx } from '../db/index.js';
-import { fail, now, parseJson } from '../lib/util.js';
-import { lang, isLang } from '../../client/lib/languages.js';
+import { fail, now, parseJson, sha256 } from '../lib/util.js';
+import { lang, isLang, VOICES } from '../../client/lib/languages.js';
 import { enqueue } from '../jobs/queue.js';
 import { todayIst } from '../nlp/dates.js';
 import { saveMedia } from './media.js';
@@ -154,7 +154,7 @@ export async function translationTargets(note) {
     );
   } else {
     rows = await all(
-      `SELECT COALESCE(gl.read_lang, u.ui_lang) AS code FROM note_recipient nr
+      `SELECT COALESCE(u.ui_lang, gl.read_lang) AS code FROM note_recipient nr
        JOIN guardian_link gl ON gl.student_id = nr.student_id AND gl.status = 'active'
        JOIN app_user u ON u.id = gl.user_id WHERE nr.note_id = ?`,
       note.id,
@@ -186,6 +186,15 @@ const presentTranslation = (row) =>
 export const translationOf = async (noteId, code) =>
   presentTranslation(await get('SELECT * FROM note_translation WHERE note_id = ? AND lang = ?', noteId, code));
 
+/**
+ * Where a translation can be heard in the teacher's chosen voice, or null when the phone's own voice
+ * has to do it. The address changes with the words or the voice, so a stored copy never goes stale.
+ */
+export function speechUrl(noteId, translation, voice) {
+  if (!translation || !config.nvidia.apiKey || lang(translation.lang).tts !== 'magpie') return null;
+  return `/api/notes/${noteId}/speech/${translation.lang}?v=${sha256(`${voice}:${translation.text}`).slice(0, 12)}`;
+}
+
 /** One language of many notes: Map of note id to translation. */
 export async function translationsByNote(ids, code) {
   if (!ids.length) return new Map();
@@ -199,6 +208,17 @@ export async function hasPendingJob(type, noteId) {
   ));
 }
 
+/** A language nobody needed yet is translated the first time someone asks (spec 5.5). */
+export async function translateWhenAsked(notes, code) {
+  const missing = notes.filter((n) => n.published_at && shownText(n) && n.transcript_lang !== code);
+  if (!missing.length) return;
+  const have = await translationsByNote(missing.map((n) => n.id), code);
+  for (const note of missing) {
+    if (have.has(note.id) || await hasPendingJob('translate_note', note.id)) continue;
+    await enqueue('translate_note', { noteId: note.id, langs: [...new Set([code, 'en'])] });
+  }
+}
+
 /** The shared shape of a note in every list, built with three queries however long the list is. */
 export async function summariseAll(notes) {
   if (!notes.length) return [];
@@ -206,7 +226,7 @@ export async function summariseAll(notes) {
   const authorIds = [...new Set(notes.map((n) => n.author_user_id).filter(Boolean))];
   const classIds = [...new Set(notes.map((n) => n.class_id))];
   const [authors, classes, tags] = await Promise.all([
-    authorIds.length ? all(`SELECT id, name FROM app_user WHERE id IN (${marks(authorIds)})`, ...authorIds) : [],
+    authorIds.length ? all(`SELECT id, name, voice FROM app_user WHERE id IN (${marks(authorIds)})`, ...authorIds) : [],
     all(`SELECT id, name, section, academic_year FROM class WHERE id IN (${marks(classIds)})`, ...classIds),
     all(
       `SELECT note_id, id, type, subject, due_date AS "dueDate", source FROM note_tag WHERE note_id IN (${marks(ids)}) ORDER BY id`,
@@ -214,6 +234,7 @@ export async function summariseAll(notes) {
     ),
   ]);
   const authorName = new Map(authors.map((a) => [a.id, a.name]));
+  const authorVoice = new Map(authors.map((a) => [a.id, a.voice]));
   const classOf = new Map(classes.map((c) => [c.id, c]));
   const tagsByNote = groupBy(tags, 'note_id');
   return notes.map((note) => {
@@ -226,6 +247,7 @@ export async function summariseAll(notes) {
       className: `${cls.name}${cls.section}`,
       academicYear: cls.academic_year,
       authorName: authorName.get(note.author_user_id) || null,
+      voice: authorVoice.get(note.author_user_id) || VOICES[0],
       createdAt: note.created_at,
       publishedAt: note.published_at,
       status: note.status,
@@ -269,7 +291,8 @@ export async function presentNote(note, { viewLang, forTeacher = false } = {}) {
     },
     viewLang: viewLang || null,
     translation,
-    translationPending: Boolean(viewLang && !translation && await hasPendingJob('translate_note', note.id)),
+    speechUrl: speechUrl(note.id, translation, base.voice),
+    translationPending: Boolean(viewLang && viewLang !== base.lang && !translation && await hasPendingJob('translate_note', note.id)),
     english: viewLang !== 'en' ? await translationOf(note.id, 'en') : null,
   };
   if (forTeacher) {

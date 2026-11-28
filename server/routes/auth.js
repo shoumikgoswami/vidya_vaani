@@ -8,7 +8,7 @@ import { sendOtp, verifyOtp, otpLoginEnabled } from '../auth/otp.js';
 import { identityFromToken, clerkFrontendApi } from '../auth/clerk.js';
 import { userForIdentity, findOrCreateUser } from '../auth/users.js';
 import { vapidPublicKey } from '../services/push.js';
-import { isLang, LANG_CODES } from '../../client/lib/languages.js';
+import { isLang, LANG_CODES, VOICES } from '../../client/lib/languages.js';
 
 export const router = Router();
 const signInLimit = limiter({ name: 'signin', max: 30, windowMs: 15 * 60_000 });
@@ -94,7 +94,10 @@ export async function describeMe(user) {
   );
   return {
     portal: user.portal || 'family',
-    user: { id: user.id, name: user.name, phone: user.phone, email: user.email, uiLang: user.ui_lang, isDemo: Boolean(user.is_demo) },
+    user: {
+      id: user.id, name: user.name, phone: user.phone, email: user.email, uiLang: user.ui_lang, voice: user.voice || VOICES[0],
+      isDemo: Boolean(user.is_demo),
+    },
     memberships: memberships.map((m) => ({ ...m, isDemo: Boolean(m.isDemo) })),
     children: children.map((c) => ({ ...c, consented: Boolean(c.consented) })),
   };
@@ -108,8 +111,9 @@ router.patch('/me', requireUser, async (req, res) => {
   const body = parse(z.object({
     name: z.string().trim().min(1).max(80).optional(),
     uiLang: z.enum(LANG_CODES).optional(),
+    voice: z.enum(VOICES).optional(),
   }), req.body);
-  await update('app_user', req.user.id, { name: body.name, ui_lang: body.uiLang });
+  await update('app_user', req.user.id, { name: body.name, ui_lang: body.uiLang, voice: body.voice });
   res.json({ ok: true });
 });
 

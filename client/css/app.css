@@ -286,6 +286,12 @@ button.chip:active { transform: scale(0.95); }
 .segmented button { position: relative; min-height: 46px; border: 0; border-radius: var(--pill); background: transparent; color: var(--muted); font: inherit; font-size: 0.95rem; font-weight: 500; line-height: 1.2; padding: var(--s1) var(--s2); cursor: pointer; transition: color var(--fast); }
 .segmented button[aria-pressed='true'] { color: var(--ink); font-weight: 700; }
 
+/* A voice in the list: tap the name to choose it, the speaker to hear it. */
+.voice-row { display: flex; align-items: center; gap: var(--s2); padding-inline-end: var(--s3); }
+.voice-pick { display: flex; flex: 1; align-items: center; gap: var(--s3); min-height: 60px; padding: var(--s2) var(--s4); border: 0; background: transparent; color: var(--ink); font: inherit; text-align: start; cursor: pointer; }
+.voice-pick .mark { display: grid; place-items: center; width: 28px; height: 28px; flex: none; border-radius: var(--pill); border: 1.5px solid var(--line-strong); color: transparent; }
+.voice-pick[aria-pressed='true'] .mark { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+
 /* ---------- Forms ---------- */
 
 .field { display: flex; flex-direction: column; gap: 6px; }
@@ -309,11 +315,20 @@ input.code { text-align: center; font-size: 1.7rem; font-weight: 600; letter-spa
 .keypad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2); direction: ltr; max-width: 360px; width: 100%; margin: 0 auto; }
 .keypad .btn { font-size: 1.45rem; font-weight: 600; border-radius: var(--r); min-height: 52px; padding: var(--s1); border-color: var(--line); font-variant-numeric: tabular-nums; }
 .keypad .btn:active { background: var(--accent-soft); }
-.view.login, .login .stack { gap: var(--s2); }
+.login .stack { gap: var(--s2); }
 .login input.code { min-height: var(--tap); padding-block: var(--s2); }
 .login .keypad .btn { min-height: 48px; }
 .login .btn.big { min-height: 54px; }
-.portal { display: flex; align-items: center; gap: var(--s3); margin-bottom: var(--s1); }
+.view.login { width: 100%; max-width: 440px; margin-inline: auto; gap: var(--s3); }
+.signin { gap: var(--s4); padding: var(--s5) var(--s4); box-shadow: var(--lift); }
+.portal { display: flex; align-items: center; gap: var(--s3); }
+.portal > .lead { width: 48px; height: 48px; border-radius: var(--r); }
+.portal h1 { font-size: 1.4rem; }
+.signin-guide { padding-bottom: var(--s4); border-bottom: 1px solid var(--line); }
+.signin-guide p + p { margin-top: var(--s1); }
+.clerk-form { width: 100%; min-width: 0; }
+.clerk-form:empty { display: none; }
+.signin-links { display: flex; flex-direction: column; gap: var(--s1); }
 .demo-code { font-size: 1.35rem; letter-spacing: 0.16em; font-variant-numeric: tabular-nums; white-space: nowrap; }
 fieldset.plain { border: 0; margin: 0; padding: 0; }
 fieldset.plain legend { padding: 0 0 var(--s2); }
@@ -403,6 +418,12 @@ details[open] > summary ~ * { animation: drop var(--medium) var(--ease); }
 .player.hero .scrub .bars i.on { background: var(--hero-ink); }
 .player.hero time { color: var(--hero-ink); }
 .player.hero :focus-visible, .player.hero .scrub:has(input:focus-visible) { outline-color: var(--hero-ink); }
+/* The phone's own voice cannot be scrubbed; the bars just move while it speaks. */
+.player.on-phone .scrub input { display: none; }
+.player.on-phone.playing .scrub .bars i { animation: talk 0.7s var(--ease) infinite alternate; animation-delay: calc(var(--h) * -1.4s); }
+@keyframes talk { to { transform: scaleY(0.45); } }
+.textlink { display: inline-flex; align-self: flex-start; align-items: center; gap: var(--s2); min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--accent); font: inherit; font-size: 0.96rem; font-weight: 600; text-align: start; cursor: pointer; }
+.textlink > span:first-child { flex: none; }
 
 /* A last date, as a page torn from a calendar. */
 .due { display: flex; align-items: center; gap: var(--s4); padding: var(--s3) var(--s3) var(--s3) var(--s3); border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }

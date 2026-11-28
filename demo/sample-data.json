@@ -2,9 +2,9 @@
   "school": { "name": "Sarvodaya Vidyalaya", "address": "Block road, Rampur", "defaultLang": "hi" },
   "people": [
     { "key": "admin", "phone": "+919900000001", "name": "Anita Rao", "role": "admin", "lang": "hi" },
-    { "key": "meena", "phone": "+919900000002", "name": "Meena Kumari", "role": "teacher", "lang": "hi", "subjects": ["Hindi", "Maths"] },
-    { "key": "lakshmi", "phone": "+919900000003", "name": "Lakshmi Iyer", "role": "teacher", "lang": "en", "subjects": ["Science"] },
-    { "key": "arjun", "phone": "+919900000004", "name": "Arjun Chatterjee", "role": "teacher", "lang": "hi", "subjects": ["Maths", "Bengali"] },
+    { "key": "meena", "phone": "+919900000002", "name": "Meena Kumari", "role": "teacher", "lang": "hi", "subjects": ["Hindi", "Maths"], "voice": "Aria" },
+    { "key": "lakshmi", "phone": "+919900000003", "name": "Lakshmi Iyer", "role": "teacher", "lang": "en", "subjects": ["Science"], "voice": "Aria" },
+    { "key": "arjun", "phone": "+919900000004", "name": "Arjun Chatterjee", "role": "teacher", "lang": "hi", "subjects": ["Maths", "Bengali"], "voice": "Leo" },
     { "key": "sunita", "phone": "+919900000011", "name": "Sunita Devi", "role": "parent", "lang": "hi", "child": "Ravi Kumar" },
     { "key": "padma", "phone": "+919900000012", "name": "Padma Reddy", "role": "parent", "lang": "te", "child": "Kavya Reddy" },
     { "key": "selvi", "phone": "+919900000013", "name": "Selvi Murugan", "role": "parent", "lang": "ta", "child": "Sneha Murugan" },

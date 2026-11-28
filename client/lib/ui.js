@@ -1,7 +1,7 @@
 // Shared pieces: guidance with a speaker, sheets, toasts, tags, the audio player and states.
 import { h, add, icon, replace } from './dom.js';
 import { t, language, languageOf, formatDate, relativeDay, daysUntil } from './i18n.js';
-import { speak, stopSpeaking } from './speak.js';
+import { speak, stopSpeaking, speakOnDevice, deviceCanSpeak } from './speak.js';
 import { LANGUAGES, lang } from './languages.js';
 
 const calm = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -242,19 +242,25 @@ function barHeights(seed) {
 }
 
 /**
- * The teacher's own voice. The audio is fetched whole, so the service worker can keep it for
- * offline replay. If the browser blocks autoplay, the large button is already on screen.
+ * The one play button for a note: the recording itself, or with `speech` ({url, text, lang}) the
+ * same words in another language, in the teacher's chosen voice or the phone's own. The audio is
+ * fetched whole, so the service worker can keep it for offline replay. If the browser blocks
+ * autoplay, the large button is already on screen.
  */
-export function player(src, { durationMs, hero = false, autoplay = false, onPlay, onLeave } = {}) {
+export function player(src, { durationMs, hero = false, autoplay = false, onPlay, onLeave, speech } = {}) {
   const audio = new Audio();
   let loading = null;
   let reported = false;
+  let onPhone = false;
+  let reading = 0;
   let frame = 0;
-  const total = () => (Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : (durationMs || 0) / 1000);
+  // A translation's length is not the recording's, and is unknown until its audio arrives.
+  const length = speech ? 0 : (durationMs || 0) / 1000;
+  const total = () => (Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : length);
   const glyph = h('span', { style: 'display:grid' }, icon('play', { weight: 'fill' }));
-  const time = h('time', {}, clock((durationMs || 0) / 1000));
+  const time = h('time', {}, speech ? '' : clock(length));
   const range = h('input', { type: 'range', min: 0, max: 1000, value: 0, 'aria-label': t('position') });
-  const bars = barHeights(src).map((height) => h('i', { style: `--h:${height.toFixed(2)}` }));
+  const bars = barHeights(speech?.url || src || speech.text).map((height) => h('i', { style: `--h:${height.toFixed(2)}` }));
   const scrub = h('div', { class: 'scrub' }, h('div', { class: 'bars', 'aria-hidden': 'true' }, bars), range);
 
   function paint() {
@@ -270,48 +276,91 @@ export function player(src, { durationMs, hero = false, autoplay = false, onPlay
     if (!audio.paused) frame = requestAnimationFrame(follow);
   }
 
+  const fetched = async (url) => {
+    const res = await fetch(url, { credentials: 'same-origin' });
+    // 204 means there is no recording of these words, so the phone reads them.
+    if (res.status !== 200 && res.status !== 206) throw new Error('audio');
+    audio.src = URL.createObjectURL(await res.blob());
+  };
+
+  async function fetchSound() {
+    if (!speech) return fetched(src);
+    try {
+      if (speech.url) return await fetched(speech.url);
+    } catch {
+      // The phone's own voice is next, then the recording.
+    }
+    if (deviceCanSpeak(speech.lang)) {
+      onPhone = true;
+      return undefined;
+    }
+    if (!src) throw new Error('audio');
+    toast(t('voice_missing', { language: nativeName(speech.lang) }));
+    return fetched(src);
+  }
+
   const load = () => {
-    loading ||= fetch(src, { credentials: 'same-origin' })
-      .then((r) => {
-        if (!r.ok) throw new Error('audio');
-        return r.blob();
-      })
-      .then((blob) => { audio.src = URL.createObjectURL(blob); })
-      .catch((error) => {
-        loading = null;
-        throw error;
-      });
+    loading ||= fetchSound().catch((error) => {
+      loading = null;
+      throw error;
+    });
     return loading;
   };
 
+  const play = h('button', { type: 'button', class: 'play', 'aria-label': t('play'), onclick: () => toggle() }, glyph);
+  const box = h('div', { class: `player${hero ? ' hero' : ''}` }, play, h('div', { class: 'track' }, scrub, time));
+
+  function showPlaying(playing) {
+    replace(glyph, icon(playing ? 'pause' : 'play', { weight: 'fill' }));
+    play.setAttribute('aria-label', t(playing ? 'pause' : 'play'));
+    box.classList.toggle('playing', playing);
+    if (playing && !reported) {
+      reported = true;
+      onPlay?.();
+    }
+  }
+
+  async function readAloud() {
+    const mine = (reading += 1);
+    box.classList.add('on-phone');
+    showPlaying(true);
+    const said = await speakOnDevice(speech.text, speech.lang);
+    if (mine !== reading) return;
+    showPlaying(false);
+    // The list of voices can arrive late, and turn out not to hold this language.
+    if (!said && src) {
+      onPhone = false;
+      box.classList.remove('on-phone');
+      toast(t('voice_missing', { language: nativeName(speech.lang) }));
+      await fetched(src);
+      await audio.play();
+    }
+  }
+
+  function stop() {
+    audio.pause();
+    if (onPhone && box.classList.contains('playing')) stopSpeaking();
+  }
+
   async function toggle(silent = false) {
-    if (!audio.paused) return audio.pause();
+    if (box.classList.contains('playing')) return stop();
     try {
       stopSpeaking();
       await load();
-      await audio.play();
+      if (onPhone) await readAloud();
+      else await audio.play();
     } catch {
       if (!silent) toast(t('err_audio'), true);
     }
   }
 
-  const play = h('button', { type: 'button', class: 'play', 'aria-label': t('play'), onclick: () => toggle() }, glyph);
-  const box = h('div', { class: `player${hero ? ' hero' : ''}` }, play, h('div', { class: 'track' }, scrub, time));
   audio.addEventListener('play', () => {
-    replace(glyph, icon('pause', { weight: 'fill' }));
-    play.setAttribute('aria-label', t('pause'));
-    box.classList.add('playing');
+    showPlaying(true);
     cancelAnimationFrame(frame);
     follow();
-    if (!reported) {
-      reported = true;
-      onPlay?.();
-    }
   });
   audio.addEventListener('pause', () => {
-    replace(glyph, icon('play', { weight: 'fill' }));
-    play.setAttribute('aria-label', t('play'));
-    box.classList.remove('playing');
+    showPlaying(false);
     paint();
   });
   audio.addEventListener('timeupdate', () => {
@@ -325,11 +374,12 @@ export function player(src, { durationMs, hero = false, autoplay = false, onPlay
       paint();
     }
   });
-  if (autoplay) setTimeout(() => toggle(true), 350);
+  if (autoplay) setTimeout(() => box.isConnected && toggle(true), 350);
   onLeave?.(() => {
-    audio.pause();
+    stop();
     cancelAnimationFrame(frame);
   });
+  box.stop = stop;
   return box;
 }
 

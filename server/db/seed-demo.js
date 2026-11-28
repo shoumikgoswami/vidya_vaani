@@ -61,7 +61,7 @@ async function seedRows() {
   const members = {};
   for (const p of data.people) {
     const user = await findOrCreateUser({ phone: p.phone, name: p.name, isDemo: 1 });
-    await update('app_user', user.id, { ui_lang: p.lang });
+    await update('app_user', user.id, { ui_lang: p.lang, voice: p.voice || null });
     users[p.key] = user.id;
     if (p.role === 'admin' || p.role === 'teacher') {
       members[p.key] = await insert('membership', {

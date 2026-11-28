@@ -24,8 +24,8 @@ Demo mode is on by default: a sample school, one-tap role switching and "simulat
 
 1. On the home screen tap **Lakshmi Iyer** (an English-speaking science teacher).
 2. Tap **Scan QR**, then **Simulate scan**, then **Ravi Kumar**. Speak a note in English and tap **Save**. (No microphone? Use the sample notes already in Ravi's diary.)
-3. Tap **Switch person** and choose **Sunita Devi**, Ravi's Hindi-speaking mother.
-4. Play the English note. The Hindi translation is under the player. (Selvi, Padma and Bimal read in Tamil, Telugu and Bengali.)
+3. Tap **Switch person** and choose **Sunita Devi**, Ravi's Hindi-speaking mother. The whole app turns to Hindi.
+4. Play the English note: one button speaks it in Hindi, and the link under the words plays the teacher's own voice. (Selvi, Padma and Bimal use Tamil, Telugu and Bengali, spoken by the phone's voice where it has one.)
 5. Tap **Reply by voice**.
 6. Switch back to Lakshmi: open the note to see "Heard by", and **Replies** for the voice reply.
 7. Switch to **Anita Rao** (admin), open **School**, then **Configuration** to see the keys in use, the models and what each language gets.
@@ -101,7 +101,8 @@ Every code carries the Vidya Vaani logo and colours, and a test reads each style
 ## What it does
 
 - **Teachers:** scan a sticker, speak, check the card (words, uncertain words, tags, dates, numbers), save by tapping or saying "save". Whole-class and selected-student notes, listen receipts, reminders, a voice inbox.
-- **Parents:** hear the teacher, read a translation, see due dates, reply by voice, filter the diary, hear a weekly summary, get notifications and a reminder at 6 pm the day before a deadline.
+- **Parents:** hear and read each note in their preferred language (with the teacher's own recording one tap away), see due dates, reply by voice, filter the diary, hear a weekly summary, get notifications and a reminder at 6 pm the day before a deadline.
+- **Voices:** a teacher picks one of six NVIDIA voices under **Me** for notes spoken in translation (Hindi and English). English words in a Hindi note are written in Devanagari before they are spoken, so "Science" is not spelled out letter by letter.
 - **Admins:** a Configuration screen with every technical detail (nothing about keys or models shows anywhere else), school settings, teachers and classes, per-student or per-school QR, branded sticker sheets, year-end promotion, metrics, activity log, AI status by language.
 
 ## Language coverage, stated plainly

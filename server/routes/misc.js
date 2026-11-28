@@ -10,16 +10,19 @@ import { sendAudio } from '../services/media.js';
 import { isAppPhrase } from '../services/i18n.js';
 import { sendToUser } from '../services/push.js';
 import { seedDemo, DEMO_PERSONAS } from '../db/seed-demo.js';
-import { LANG_CODES } from '../../client/lib/languages.js';
+import { LANG_CODES, VOICES } from '../../client/lib/languages.js';
 
 export const router = Router();
 
 /** 204 tells the browser to use its own voice. */
 router.get('/tts', limiter({ max: 120, windowMs: 60_000 }), async (req, res) => {
-  const { lang, text } = parse(z.object({ lang: z.enum(LANG_CODES), text: z.string().trim().min(1).max(600) }), req.query);
+  const { lang, text, voice } = parse(z.object({
+    lang: z.enum(LANG_CODES), text: z.string().trim().min(1).max(600), voice: z.enum(VOICES).optional(),
+  }), req.query);
   // Only the app's own phrases may be synthesised without signing in, to protect the free tier.
   if (!req.user && !isAppPhrase(lang, text)) return res.status(204).end();
-  const audio = await synthesize(text, lang);
+  // Another voice is for a signed-in teacher trying it out.
+  const audio = await synthesize(text, lang, { voice: req.user ? voice : undefined });
   if (!audio) return res.status(204).end();
   sendAudio(req, res, { mime: 'audio/wav', data: audio }, { maxAge: 604_800 });
 });

@@ -6,7 +6,7 @@ import { parse, fail, intParam, now, audit, limiter } from '../lib/util.js';
 import { requireUser, destroySession } from '../auth/session.js';
 import { requireChild } from '../auth/authorize.js';
 import { enqueue } from '../jobs/queue.js';
-import { summariseAll, translationsByNote } from '../services/notes.js';
+import { summariseAll, translationsByNote, translateWhenAsked, hasPendingJob, speechUrl } from '../services/notes.js';
 import { todayIst, addDays } from '../nlp/dates.js';
 import { LANG_CODES } from '../../client/lib/languages.js';
 import { TAG_TYPES } from '../nlp/tags.js';
@@ -64,6 +64,9 @@ router.patch('/links/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
+/** The account's preferred language; the one given when linking covers an account without one. */
+const preferred = (user, link) => user.ui_lang || link.read_lang || 'en';
+
 const notesForChild = (studentId, { before = null, limit = 20 } = {}) =>
   all(
     `SELECT n.* FROM note n JOIN note_recipient nr ON nr.note_id = n.id AND nr.student_id = ?
@@ -91,10 +94,13 @@ async function diaryEntries(rows, studentId, userId, readLang) {
   const replies = new Map(replyRows.map((r) => [r.note_id, r.n]));
   const today = todayIst();
   return summaries.map((base) => {
-    const translation = readLang !== base.lang ? translations.get(base.id) : null;
+    const translation = readLang !== base.lang ? translations.get(base.id) || null : null;
     const due = base.tags.map((t) => t.dueDate).filter(Boolean).sort();
     return {
       ...base,
+      viewLang: readLang,
+      translation,
+      speechUrl: speechUrl(base.id, translation, base.voice),
       shown: translation?.text || base.text,
       translated: Boolean(translation),
       heard: heard.has(base.id),
@@ -112,17 +118,23 @@ router.get('/children/:id/notes', async (req, res) => {
     tag: z.enum(TAG_TYPES).optional(),
     status: z.enum(['pending', 'done']).optional(),
     cursor: z.string().max(40).optional(),
+    lang: z.enum(LANG_CODES).optional(),
   }), req.query);
-  const readLang = link.read_lang || req.user.ui_lang || 'en';
+  const readLang = query.lang || preferred(req.user, link);
   const page = 20;
   // Filtering happens after loading, so read further back when a filter is on.
   const rows = await notesForChild(studentId, { before: query.cursor || null, limit: query.tag || query.status ? 200 : page });
+  // The newest notes are translated if nobody has needed this language yet.
+  await translateWhenAsked(rows.slice(0, 5), readLang);
   const notes = (await diaryEntries(rows, studentId, req.user.id, readLang))
     .filter((n) => (!query.tag || n.tags.some((t) => t.type === query.tag)) && (!query.status || n.state === query.status));
+  const newest = rows[0];
   res.json({
     readLang,
     today: todayIst(),
     notes,
+    translationPending: Boolean(newest && newest.transcript_lang !== readLang && notes[0]?.id === newest.id && !notes[0].translation
+      && await hasPendingJob('translate_note', newest.id)),
     nextCursor: !query.tag && !query.status && rows.length === page ? rows.at(-1).published_at : null,
   });
 });
@@ -134,7 +146,7 @@ router.get('/children/:id/summary', async (req, res) => {
   const today = todayIst();
   const since = new Date(Date.now() - 7 * 86_400_000).toISOString();
   const entries = await diaryEntries(
-    await notesForChild(studentId, { limit: 100 }), studentId, req.user.id, link.read_lang || req.user.ui_lang || 'en',
+    await notesForChild(studentId, { limit: 100 }), studentId, req.user.id, preferred(req.user, link),
   );
   const due = entries
     .flatMap((n) => n.tags.filter((t) => t.dueDate >= today && t.dueDate <= addDays(today, 7))

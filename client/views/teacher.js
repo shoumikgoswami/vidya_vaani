@@ -1,17 +1,17 @@
 // S7 class dashboard, S8 voice inbox and adding students (J2).
 import { h, add, icon, replace } from '../lib/dom.js';
 import { api, post, patch, del } from '../lib/api.js';
-import { t, languageOf, formatDate, childCount } from '../lib/i18n.js';
+import { t, language, languageOf, formatDate, childCount } from '../lib/i18n.js';
 import { voiceCapture } from '../lib/capture.js';
 import * as outbox from '../lib/outbox.js';
 import { store, navigate, membershipFor, speakLanguage, adminSchoolId } from '../lib/state.js';
 import {
   guide, button, sheet, confirmSheet, skeletons, failure, showError, toast, notice, empty, avatar, field, form, segmented,
-  tagChip, player, reveal,
+  tagChip, reveal,
 } from '../lib/ui.js';
 import { installCard } from '../lib/install.js';
 import { voiceReply } from './reply.js';
-import { words, markListened } from './note.js';
+import { noteBody, markListened } from './note.js';
 import { speak } from '../lib/speak.js';
 
 const reload = () => navigate(location.pathname + location.search, { replace: true });
@@ -30,11 +30,13 @@ async function load(ctx, path, draw) {
   }
 }
 
+const preview = (text) => (text ? `${text.slice(0, 60)}${text.length > 60 ? '…' : ''}` : t('listen_only'));
+
 const noteRow = (note) =>
   h('li', {}, h('a', { class: 'item', href: note.publishedAt ? `/t/note/${note.id}` : `/t/confirm/${note.id}` },
     h('span', { class: 'lead' }, icon(note.publishedAt ? 'play' : 'clock', { weight: note.publishedAt ? 'fill' : 'bold' })),
     h('span', { class: 'grow' },
-      h('strong', { dir: 'auto' }, note.text ? `${note.text.slice(0, 60)}${note.text.length > 60 ? '…' : ''}` : t('listen_only')),
+      h('strong', { dir: 'auto' }, preview(note.shown || note.text)),
       h('span', { class: 'muted small' }, [
         note.recipients?.length > 2 ? childCount(note.recipients.length) : note.recipients?.join(', '),
         formatDate(note.createdAt),
@@ -131,7 +133,7 @@ function editStudent(student) {
 
 export function classView(ctx) {
   const id = Number(ctx.params.id);
-  return load(ctx, `/classes/${id}`, (data, box) => {
+  return load(ctx, `/classes/${id}?lang=${language()}`, (data, box) => {
     const { class: cls, students, approvals, notes, school } = data;
     const name = `${cls.name}${cls.section}`;
     const decide = (linkId, action) => async () => {
@@ -270,7 +272,7 @@ export function addStudents(ctx) {
 
 export function inbox(ctx) {
   add(ctx.root, h('h1', {}, t('replies')));
-  return load(ctx, '/inbox', ({ replies }, box) => {
+  return load(ctx, `/inbox?lang=${language()}`, ({ replies }, box) => {
     if (!replies.length) return add(box, empty('chat-circle', 'inbox_empty'));
     add(box, replies.map((r) => {
       const answer = h('div', {});
@@ -279,8 +281,7 @@ export function inbox(ctx) {
           h('div', { class: 'grow' }, h('strong', {}, t('parent_of', { child: r.student?.name || '' })), h('br'),
             h('span', { class: 'muted small' }, `${t('class')} ${r.className} · ${formatDate(r.createdAt)}`))),
         r.about && h('p', { class: 'muted small', dir: 'auto' }, `${t('about_note')}: ${r.about}`),
-        r.audioUrl && player(r.audioUrl, { durationMs: r.durationMs, onLeave: ctx.onLeave, onPlay: () => markListened(r.id) }),
-        words(r),
+        noteBody(r, { onLeave: ctx.onLeave, onPlay: () => markListened(r.id) }),
         r.tags.length > 0 && h('div', { class: 'chips' }, r.tags.map((x) => tagChip(x))),
         answer,
         button(t(r.answered ? 'answer_again' : 'answer_by_voice'), {
