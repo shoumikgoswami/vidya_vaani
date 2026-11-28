@@ -8,6 +8,7 @@ import { startApp, uuid, DEMO } from './helpers/app.js';
 
 const asr = { calls: [], failWith: null, text: 'रवि, कल page 12 की कविता याद करनी है।' };
 const llm = { calls: [], systems: [], nvidiaStatus: 200, junk: false };
+const tts = { calls: [] };
 
 const answerFor = (body) => {
   llm.systems.push(body.messages[0].content);
@@ -43,6 +44,15 @@ before(async () => {
     let raw = '';
     req.on('data', (c) => { raw += c; });
     req.on('end', () => {
+      if (req.url.startsWith('/tts/')) {
+        tts.calls.push(req.url);
+        if (req.url.endsWith('/list_voices')) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ 'hi-IN': { voices: ['Magpie-Multilingual.HI-IN.Aria'] } }));
+        }
+        res.writeHead(200, { 'Content-Type': 'application/octet-stream' });
+        return res.end(Buffer.alloc(4000));
+      }
       const provider = req.url.startsWith('/openrouter') ? 'openrouter' : 'nvidia';
       if (!req.url.endsWith('/chat/completions')) return res.writeHead(404).end();
       const body = JSON.parse(raw);
@@ -245,6 +255,17 @@ test('placeholders are only mentioned when a note has names or numbers', async (
   assert.doesNotMatch(llm.systems.at(-1), /placeholder/);
   await translate('कल page 12 याद करना है।', 'hi', ['en']);
   assert.match(llm.systems.at(-1), /placeholder/);
+});
+
+test('Hindi is read aloud in the NVIDIA voice, once, and then from the cache', async () => {
+  tts.calls.length = 0;
+  const url = `/api/tts?${new URLSearchParams({ lang: 'hi', text: 'हो गया। नोट सेव हो गया।' })}`;
+  const first = await meena.get(url);
+  assert.equal(first.status, 200);
+  assert.equal(first.headers.get('content-type'), 'audio/wav');
+  assert.equal(first.data.subarray(0, 4).toString(), 'RIFF');
+  assert.equal((await meena.get(url)).status, 200);
+  assert.deepEqual(tts.calls, ['/tts/v1/audio/list_voices', '/tts/v1/audio/synthesize']);
 });
 
 test('the limiter holds calls back once the per-minute budget is spent', async () => {

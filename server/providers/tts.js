@@ -22,7 +22,11 @@ async function listVoices() {
 
 export async function voiceFor(code) {
   const locale = MAGPIE_LOCALE[code];
-  voicePromise ||= (await listVoices()).catch(() => []);
+  // The promise itself is cached, so many requests at once ask for the list only once.
+  voicePromise ||= listVoices().catch(() => {
+    voicePromise = undefined;
+    return [];
+  });
   const voices = await voicePromise;
   const tag = `.${locale.toUpperCase()}.`;
   const matching = voices.filter((v) => typeof v === 'string' && v.toUpperCase().includes(tag));
