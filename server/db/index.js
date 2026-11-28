@@ -4,9 +4,9 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import fs from 'node:fs';
 import path from 'node:path';
-import { config } from '../config.js';
+import { config, ROOT } from '../config.js';
 
-const migrationsDir = path.join(import.meta.dirname, 'migrations');
+const migrationsDir = path.join(ROOT, 'server', 'db', 'migrations');
 const INT8 = 20;
 const NUMERIC = 1700;
 
@@ -83,8 +83,10 @@ async function openPglite() {
   return pg;
 }
 
+const migrationFiles = () => fs.readdirSync(migrationsDir).filter((f) => f.endsWith('.sql')).sort();
+
 async function applyMigrations(target) {
-  const files = fs.readdirSync(migrationsDir).filter((f) => f.endsWith('.sql')).sort();
+  const files = migrationFiles();
   await target.transaction(async (t) => {
     // Two deploys or functions may start at once. Only one of them migrates.
     await t.query('SELECT pg_advisory_xact_lock(727401)', []);
@@ -103,6 +105,15 @@ async function applyMigrations(target) {
 export async function migrate() {
   const db = await driver();
   if (db.kind === 'neon') await applyMigrations(db);
+}
+
+/** A one-query check for a serverless start; migrates only when the database is behind. */
+export async function ensureSchema() {
+  const db = await driver();
+  if (db.kind !== 'neon') return;
+  const current = await db.query('SELECT MAX(version) AS version FROM schema_version', [])
+    .then(({ rows }) => Number(rows[0].version), () => 0);
+  if (current < migrationFiles().length) await applyMigrations(db);
 }
 
 export async function close() {

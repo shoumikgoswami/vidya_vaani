@@ -1,7 +1,9 @@
 // Every setting has a default, so the app starts with no .env file at all.
 import path from 'node:path';
 
-export const ROOT = path.resolve(import.meta.dirname, '..');
+// Files are found from the project root. A Netlify function is bundled into one file, so there the
+// root is the function's task folder, where netlify.toml's included files keep their paths.
+export const ROOT = process.env.LAMBDA_TASK_ROOT || path.resolve(import.meta.dirname, '..');
 
 export function loadConfig(env = process.env) {
   const str = (key, fallback = '') => (env[key] ?? '').trim() || fallback;
@@ -15,16 +17,20 @@ export function loadConfig(env = process.env) {
   const dataDir = path.resolve(str('DATA_DIR', path.join(ROOT, '.data')));
   const clerkPk = str('CLERK_PUBLISHABLE_KEY');
   const clerkSk = str('CLERK_SECRET_KEY');
+  // Set by the Netlify functions: no disk to keep, no timers, a proxy in front.
+  const serverless = bool('SERVERLESS', false);
 
   return {
     port,
     dataDir,
     // Neon when set (Netlify's own database variable also works), otherwise the built-in database.
     databaseUrl: str('DATABASE_URL') || str('NETLIFY_DATABASE_URL'),
-    serverless: bool('SERVERLESS', false),
+    serverless,
+    // The public demo spends at most this many AI jobs a day on its sample school. 0 means no limit.
+    demoAiDailyLimit: Math.max(0, Number(str('AI_DEMO_DAILY_LIMIT', serverless ? '300' : '0')) || 0),
     publicBaseUrl: str('PUBLIC_BASE_URL', `http://localhost:${port}`).replace(/\/+$/, ''),
     demoMode: bool('DEMO_MODE', true),
-    trustProxy: bool('TRUST_PROXY', false),
+    trustProxy: bool('TRUST_PROXY', serverless),
     sessionDays: 180,
     maxNoteSeconds: 120,
     clerk: {

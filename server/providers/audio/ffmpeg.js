@@ -10,9 +10,24 @@ const exec = promisify(execFile);
 const WAV_LIMIT = 3.5 * 1024 * 1024; // gRPC messages default to 4 MB
 
 let binary;
+/** The copy bundled with a serverless function is read only and may have lost its run permission. */
+async function bundled() {
+  const { default: source } = await import('ffmpeg-static');
+  const target = path.join(os.tmpdir(), 'vv-ffmpeg');
+  const ready = await fs.stat(target).then(async (s) => s.size === (await fs.stat(source)).size, () => false);
+  if (!ready) {
+    // Written beside the target and renamed, so a second request never runs a half-copied file.
+    const staging = `${target}-${process.pid}-${Date.now()}`;
+    await fs.copyFile(source, staging);
+    await fs.chmod(staging, 0o755);
+    await fs.rename(staging, target);
+  }
+  return target;
+}
+
 /** The container has ffmpeg installed. A Netlify function carries its own copy. */
 async function ffmpegPath() {
-  binary ||= process.env.FFMPEG_PATH || (config.serverless ? (await import('ffmpeg-static')).default : 'ffmpeg');
+  binary ||= process.env.FFMPEG_PATH || (config.serverless ? bundled() : 'ffmpeg');
   return binary;
 }
 

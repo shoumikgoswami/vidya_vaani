@@ -16,6 +16,7 @@ import { lexicon } from '../nlp/text.js';
 import { enqueue } from '../jobs/queue.js';
 import { pushNewNote } from '../jobs/handlers.js';
 import { completeJson, llmAvailable } from '../providers/llm.js';
+import { aiAllowedFor } from '../services/demo-budget.js';
 import { transcribe } from '../providers/asr.js';
 import { audioUpload, summarise, summariseAll, heardByNote, recipientsByNote, recipientsOf, presentNote } from '../services/notes.js';
 
@@ -299,7 +300,8 @@ router.post('/formfill', audioUpload, async (req, res) => {
   if (!(await membershipsFor(req.user.id)).length) fail(403, 'forbidden');
 
   let spoken = body.text?.trim() || '';
-  if (req.file) {
+  const budget = await aiAllowedFor(req.user.id);
+  if (req.file && budget) {
     try {
       spoken = (await transcribe(req.file.buffer, { languageHint: body.lang }))?.text || spoken;
     } catch {
@@ -311,7 +313,7 @@ router.post('/formfill', audioUpload, async (req, res) => {
   if (body.kind === 'list') return res.json({ text: spoken, people: parseList(spoken), provider: 'rules' });
 
   const rules = parsePerson(spoken);
-  if (llmAvailable()) {
+  if (llmAvailable() && budget) {
     try {
       const { data, model } = await completeJson({
         system: `Extract ${body.kind === 'teacher' ? 'teachers' : 'students and their parent phone numbers'} from speech.

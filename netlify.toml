@@ -1,0 +1,33 @@
+# The hosted app: static files on Netlify's CDN, the API and background work as functions,
+# Postgres on Neon. Docker (docker compose up) runs the same code in one container.
+
+[build]
+  command = "node scripts/build.mjs"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[functions]
+  directory = "netlify/functions"
+  # Keeps the source layout, so the app can read the files that sit beside its code.
+  node_bundler = "nft"
+  included_files = [
+    "server/db/migrations/**",
+    "server/nlp/lexicon.json",
+    "server/providers/nvidia/protos/**",
+    "client/i18n/**",
+    "demo/**",
+    "node_modules/ffmpeg-static/ffmpeg",
+    "!node_modules/ffmpeg-static/ffmpeg.exe",
+    # The built-in database is only for the container.
+    "!node_modules/@electric-sql/**",
+  ]
+
+# The API takes /api/* and /healthz itself (netlify/functions/api.mjs).
+
+# Every other address is the single-page app.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

@@ -2,10 +2,10 @@
 import path from 'node:path';
 import grpc from '@grpc/grpc-js';
 import protoLoader from '@grpc/proto-loader';
-import { config } from '../../config.js';
+import { config, ROOT } from '../../config.js';
 import { ProviderError } from '../ratelimit.js';
 
-const definition = protoLoader.loadSync(path.join(import.meta.dirname, 'protos', 'riva_asr.proto'), {
+const definition = protoLoader.loadSync(path.join(ROOT, 'server', 'providers', 'nvidia', 'protos', 'riva_asr.proto'), {
   keepCase: true, enums: String, longs: String, defaults: true,
 });
 export const asrPackage = grpc.loadPackageDefinition(definition).nvidia.riva.asr;

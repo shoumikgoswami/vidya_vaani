@@ -1,8 +1,9 @@
 // Text helpers that work across Indic scripts, where \b is useless.
 import fs from 'node:fs';
 import path from 'node:path';
+import { ROOT } from '../config.js';
 
-export const lexicon = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, 'lexicon.json'), 'utf8'));
+export const lexicon = JSON.parse(fs.readFileSync(path.join(ROOT, 'server', 'nlp', 'lexicon.json'), 'utf8'));
 
 // Zero code points of the decimal digit blocks used in India.
 const DIGIT_ZEROS = [0x0660, 0x06f0, 0x0966, 0x09e6, 0x0a66, 0x0ae6, 0x0b66, 0x0be6, 0x0c66, 0x0ce6, 0x0d66, 0x1c50, 0xabf0];

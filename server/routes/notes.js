@@ -17,6 +17,7 @@ import {
   heardSummary, translationOf, saveTranslation, hasPendingJob,
 } from '../services/notes.js';
 import { loadMedia, sendAudio } from '../services/media.js';
+import { aiAllowed } from '../services/demo-budget.js';
 import { TAG_TYPES } from '../nlp/tags.js';
 
 export const router = Router();
@@ -95,7 +96,7 @@ router.get('/notes/:id/translation/:lang', async (req, res) => {
   const source = shownText(note);
   if (code === note.transcript_lang) return res.json({ lang: code, text: source, provider: 'original', machineWarning: false });
   let found = await translationOf(note.id, code);
-  if (!found && source) {
+  if (!found && source && await aiAllowed(note.school_id)) {
     try {
       const result = await translate(source, note.transcript_lang, [code], { protectTerms: (await recipientsOf(note.id)).map((r) => r.name) });
       if (result[code]) {
@@ -218,7 +219,7 @@ router.post('/notes/:id/respeak', audioUpload, async (req, res) => {
   const target = words[body.wordIndex] || fail(400, 'invalid_input');
 
   let heard = '';
-  if (req.file) {
+  if (req.file && await aiAllowed(note.school_id)) {
     try {
       heard = (await transcribe(req.file.buffer, { languageHint: note.transcript_lang || note.lang_hint }))?.text || '';
     } catch {

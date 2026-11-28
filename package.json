@@ -12,7 +12,8 @@
     "start": "node server/index.js",
     "test": "node --test --test-concurrency=1 --test-timeout=60000 --test-force-exit \"tests/*.test.js\"",
     "models:test": "node --env-file-if-exists=.env scripts/model-test.js",
-    "i18n:fill": "node --env-file-if-exists=.env scripts/translate-ui.js"
+    "i18n:fill": "node --env-file-if-exists=.env scripts/translate-ui.js",
+    "build": "node scripts/build.mjs"
   },
   "dependencies": {
     "@clerk/backend": "^3.33.1",
@@ -43,5 +44,8 @@
     "serverless-http": "^4.0.0",
     "web-push": "^4.0.0",
     "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "ffmpeg-static": "^5.3.0"
   }
 }

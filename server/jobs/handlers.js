@@ -10,6 +10,7 @@ import { sendToUser } from '../services/push.js';
 import { t } from '../services/i18n.js';
 import { setTags, shownText, translationTargets, recipientsOf, saveTranslation } from '../services/notes.js';
 import { loadMedia } from '../services/media.js';
+import { aiAllowed } from '../services/demo-budget.js';
 import { tokens } from '../nlp/text.js';
 
 const noteById = (id) => get('SELECT * FROM note WHERE id = ?', id);
@@ -93,7 +94,7 @@ async function processNote({ noteId }) {
   let result;
   try {
     const audio = await loadMedia(note.audio_path);
-    result = audio && await transcribe(audio.data, { languageHint: note.lang_hint });
+    result = audio && await aiAllowed(note.school_id) && await transcribe(audio.data, { languageHint: note.lang_hint });
   } catch (error) {
     const fallback = browserResult(note);
     if (error.transient) {
@@ -121,7 +122,7 @@ async function translateNote({ noteId, langs }) {
   if (!source) return;
   const have = new Set((await all('SELECT lang FROM note_translation WHERE note_id = ?', noteId)).map((r) => r.lang));
   const targets = (langs?.length ? langs : await translationTargets(note)).filter((c) => !have.has(c));
-  if (!targets.length) return;
+  if (!targets.length || !await aiAllowed(note.school_id)) return;
 
   const school = await get('SELECT name FROM school WHERE id = ?', note.school_id);
   const names = (await recipientsOf(noteId)).flatMap((r) => [r.name, r.name.split(/\s+/)[0]]);
