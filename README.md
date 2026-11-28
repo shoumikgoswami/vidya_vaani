@@ -167,6 +167,10 @@ npx netlify-cli deploy --build --prod
 
 On Windows, `scripts\netlify-secrets.ps1` does the import in one step: run it and paste the connection string from Neon when asked. It takes the keys from `.env`.
 
+4. To deploy from GitHub, link the repository once in Netlify (Project configuration, Build & deploy, Link repository) and pick the `main` branch. The build settings come from `netlify.toml`. From then on every push to `main` is built and published, and a build that fails leaves the last version live. Netlify does not wait for the GitHub checks, so run `npm test` before pushing.
+
+Netlify stops a build when the value of a secret setting appears in the code or the built files. `netlify.toml` lists the settings that are public by nature, such as model names and addresses. Never add a real key or the database address to that list.
+
 `PUBLIC_BASE_URL` is printed into the QR codes, so set it before printing stickers. The database tables and the sample school are created on first use. Functions:
 
 | Function | Work |

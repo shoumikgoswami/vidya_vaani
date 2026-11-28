@@ -7,6 +7,11 @@
 
 [build.environment]
   NODE_VERSION = "22"
+  # Netlify fails a build when the value of a secret setting appears in the code or the built files.
+  # Model names, addresses, switches and the publishable sign-in key are public by nature and sit in
+  # this repository, even if they were imported as secret. The real keys and the database address
+  # are not listed here, so they stay scanned.
+  SECRETS_SCAN_OMIT_KEYS = "CLERK_PUBLISHABLE_KEY,DEMO_MODE,PUBLIC_BASE_URL,TRUST_PROXY,OPENROUTER_MODELS,NVIDIA_ASR_PARAKEET_FUNCTION_ID,NVIDIA_ASR_WHISPER_FUNCTION_ID,NVIDIA_GRPC_HOST,NVIDIA_LLM_BASE,NVIDIA_LLM_MODEL,NVIDIA_LLM_FALLBACK,NVIDIA_TRANSLATE_MODEL,NVIDIA_TRANSLATE_HI_EN,NVIDIA_RPM_LIMIT,NVIDIA_TTS_MAGPIE_URL"
 
 [functions]
   directory = "netlify/functions"
